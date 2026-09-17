@@ -28,3 +28,19 @@ Plain `dart test` fails existing JWT tests when `JWT_SECRET` is unset. Authentic
 
 - Registration response test requires configured `DATABASE_URL` and skips otherwise.
 - `device_name` is not independently length-validated; DB column caps it at 255 and route preserves existing catch/error semantics.
+
+## Review Fixes
+
+- Moved registration user insert and session creation into one DB transaction; failed session creation rolls back user creation.
+- Added login response-shape coverage.
+- Added same-device session replacement and metadata coverage.
+- Added invalid `device_id` value/type coverage for both routes.
+- Added non-string `device_name` rejection coverage.
+- Replaced inaccurate `Device ID required` with bounded validation message.
+- Added concrete validation and invalid-credential error response examples to docs.
+
+## Review-Fix Verification
+
+- `dart analyze` — passed.
+- `JWT_SECRET='test-secret-with-at-least-32-characters' dart test` — passed: 25 passed, 7 skipped.
+- No migration changes needed; existing `004_user_sessions.sql` supports required behavior.
