@@ -81,7 +81,9 @@ Request:
 ```json
 {
   "email": "user@example.com",
-  "password": "password123"
+  "password": "password123",
+  "device_id": "mobile-device-uuid",
+  "device_name": "Pixel 9"
 }
 ```
 
@@ -96,6 +98,9 @@ Success `201`:
       "id": "uuid",
       "email": "user@example.com"
     },
+    "access_token": "jwt",
+    "refresh_token": "opaque-refresh-token",
+    "session_id": "session-uuid",
     "token": "jwt"
   }
 }
@@ -105,7 +110,10 @@ Validation:
 
 - Email valid.
 - Password minimum 8 characters.
+- `device_id` required, non-empty, maximum 255 characters.
+- `device_name` optional.
 - Email duplicate returns `409`.
+- Missing or invalid `device_id` returns `400`.
 
 ### `POST /api/v1/auth/login`
 
@@ -114,7 +122,9 @@ Request:
 ```json
 {
   "email": "user@example.com",
-  "password": "password123"
+  "password": "password123",
+  "device_id": "mobile-device-uuid",
+  "device_name": "Pixel 9"
 }
 ```
 
@@ -129,12 +139,15 @@ Success `200`:
       "id": "uuid",
       "email": "user@example.com"
     },
+    "access_token": "jwt",
+    "refresh_token": "opaque-refresh-token",
+    "session_id": "session-uuid",
     "token": "jwt"
   }
 }
 ```
 
-Invalid credentials return `401`.
+Invalid credentials return `401`. Missing or invalid `device_id` returns `400`.
 
 ## Categories API
 
