@@ -5,6 +5,13 @@ import 'package:postgres/postgres.dart';
 import 'utils/jwt_utils.dart';
 import 'api_response.dart';
 
+class AuthSession {
+  const AuthSession(this.userId, this.sessionId);
+
+  final String userId;
+  final String sessionId;
+}
+
 Handler authMiddleware(Handler handler) {
   return (context) async {
     if (context.request.method == HttpMethod.options) {
@@ -25,7 +32,8 @@ Handler authMiddleware(Handler handler) {
     final claims = JwtUtils.verifyClaims(value.substring(7).trim());
     final userId = claims?['sub'];
     final tokenVersion = claims?['ver'];
-    if (userId is! String || tokenVersion is! int) {
+    final sessionId = claims?['sid'];
+    if (userId is! String || tokenVersion is! int || sessionId is! String) {
       return apiResponse(
         statusCode: HttpStatus.unauthorized,
         message: 'Token expired or invalid',
@@ -34,8 +42,14 @@ Handler authMiddleware(Handler handler) {
 
     final pool = context.read<Pool<dynamic>>();
     final result = await pool.execute(
-      Sql.named('SELECT token_version FROM users WHERE id = @id'),
-      parameters: {'id': userId},
+      Sql.named('''
+        SELECT u.token_version
+        FROM users u
+        JOIN user_sessions s ON s.user_id = u.id
+        WHERE u.id = @id AND s.id = @session_id
+          AND s.revoked_at IS NULL AND s.expires_at > CURRENT_TIMESTAMP
+      '''),
+      parameters: {'id': userId, 'session_id': sessionId},
     );
     if (result.isEmpty || result.first[0] != tokenVersion) {
       return apiResponse(
@@ -44,6 +58,10 @@ Handler authMiddleware(Handler handler) {
       );
     }
 
-    return handler(context.provide<String>(() => userId));
+    return handler(
+      context
+          .provide<String>(() => userId)
+          .provide<AuthSession>(() => AuthSession(userId, sessionId)),
+    );
   };
 }

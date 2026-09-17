@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:clarimoney_backend/src/auth/session_service.dart';
+import 'package:clarimoney_backend/src/utils/jwt_utils.dart';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 import 'package:uuid/uuid.dart';
@@ -9,6 +10,23 @@ void main() {
   test('refresh lifetime remains bounded', () {
     expect(SessionService.refreshTokenLifetime, const Duration(days: 30));
   });
+
+  test('created access token carries session ID claim', () async {
+    final pool = _pool();
+    final userId = const Uuid().v4();
+    try {
+      await _insertUser(pool, userId);
+      final created = await SessionService(
+        pool,
+      ).createSession(userId: userId, deviceId: userId);
+
+      final claims = JwtUtils.verifyClaims(created['accessToken']!);
+      expect(claims?['sid'], created['sessionId']);
+    } finally {
+      await _deleteUser(pool, userId);
+      await pool.close();
+    }
+  }, skip: _skipDbTest);
 
   test(
     'reused refresh token revokes current session',
@@ -102,7 +120,8 @@ void main() {
       await _insertUser(pool, userId);
       final service = SessionService(
         pool,
-        accessTokenGenerator: (_) => throw StateError('invalid JWT config'),
+        accessTokenGenerator: (_, _, _) =>
+            throw StateError('invalid JWT config'),
       );
 
       expect(

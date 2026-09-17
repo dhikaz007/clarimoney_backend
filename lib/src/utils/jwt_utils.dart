@@ -12,10 +12,15 @@ class JwtUtils {
     return secret;
   }
 
-  static String generate(String userId, {int tokenVersion = 0}) {
+  static String generate(
+    String userId, {
+    int tokenVersion = 0,
+    String? sessionId,
+  }) {
     final jwt = JWT({
       'sub': userId,
       'ver': tokenVersion,
+      if (sessionId != null) 'sid': sessionId,
       'iat': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       'exp':
           DateTime.now().add(accessTokenLifetime).millisecondsSinceEpoch ~/

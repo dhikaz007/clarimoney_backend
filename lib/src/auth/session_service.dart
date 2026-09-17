@@ -7,12 +7,20 @@ import '../utils/refresh_token_utils.dart';
 class SessionService {
   SessionService(
     this._pool, {
-    String Function(String userId)? accessTokenGenerator,
-  }) : _accessTokenGenerator = accessTokenGenerator ?? JwtUtils.generate;
+    String Function(String userId, String sessionId, int tokenVersion)?
+    accessTokenGenerator,
+  }) : _accessTokenGenerator =
+           accessTokenGenerator ??
+           ((userId, sessionId, tokenVersion) => JwtUtils.generate(
+             userId,
+             tokenVersion: tokenVersion,
+             sessionId: sessionId,
+           ));
 
   static const refreshTokenLifetime = Duration(days: 30);
   final Pool<dynamic> _pool;
-  final String Function(String userId) _accessTokenGenerator;
+  final String Function(String userId, String sessionId, int tokenVersion)
+  _accessTokenGenerator;
   final Uuid _uuid = const Uuid();
 
   Future<Map<String, String>> createSession({
@@ -41,7 +49,6 @@ class SessionService {
   }) async {
     final sessionId = _uuid.v4();
     final refreshToken = RefreshTokenUtils.generate();
-    final accessToken = _accessTokenGenerator(userId);
     final now = DateTime.now().toUtc();
     final expiresAt = now.add(refreshTokenLifetime);
     late String persistedSessionId;
@@ -78,6 +85,18 @@ class SessionService {
       throw StateError('Session insert failed');
     }
     persistedSessionId = result.first[0] as String;
+    final user = await session.execute(
+      Sql.named('SELECT token_version FROM users WHERE id = @user_id'),
+      parameters: {'user_id': userId},
+    );
+    if (user.isEmpty || user.first[0] is! int) {
+      throw StateError('User lookup failed');
+    }
+    final accessToken = _accessTokenGenerator(
+      userId,
+      persistedSessionId,
+      user.first[0] as int,
+    );
     await session.execute(
       Sql.named('''
           UPDATE refresh_token_history
@@ -114,10 +133,12 @@ class SessionService {
     return _pool.runTx((session) async {
       final result = await session.execute(
         Sql.named('''
-          SELECT h.session_id, s.user_id, h.expires_at, h.consumed_at,
+          SELECT h.session_id, s.user_id, u.token_version,
+                 h.expires_at, h.consumed_at,
                  s.expires_at, s.revoked_at
           FROM refresh_token_history h
           JOIN user_sessions s ON s.id = h.session_id
+          JOIN users u ON u.id = s.user_id
           WHERE h.token_hash = @refresh_token_hash
           FOR UPDATE
         '''),
@@ -128,12 +149,14 @@ class SessionService {
       final row = result.first;
       final sessionId = row[0];
       final userId = row[1];
-      final tokenExpires = row[2];
-      final consumedAt = row[3];
-      final sessionExpires = row[4];
-      final revokedAt = row[5];
+      final tokenVersion = row[2];
+      final tokenExpires = row[3];
+      final consumedAt = row[4];
+      final sessionExpires = row[5];
+      final revokedAt = row[6];
       if (sessionId is! String ||
           userId is! String ||
+          tokenVersion is! int ||
           tokenExpires is! DateTime ||
           sessionExpires is! DateTime) {
         if (sessionId is String && userId is String) {
@@ -151,7 +174,11 @@ class SessionService {
         return null;
       }
 
-      final accessToken = _accessTokenGenerator(userId);
+      final accessToken = _accessTokenGenerator(
+        userId,
+        sessionId,
+        tokenVersion,
+      );
       final update = await session.execute(
         Sql.named('''
           UPDATE user_sessions
@@ -209,6 +236,32 @@ class SessionService {
       parameters: {'id': sessionId, 'user_id': userId},
     );
     return result.affectedRows > 0;
+  }
+
+  Future<List<Map<String, dynamic>>> listSessions(String userId) async {
+    final result = await _pool.execute(
+      Sql.named('''
+        SELECT id, device_id, device_name, user_agent, created_at,
+               expires_at, last_used_at
+        FROM user_sessions
+        WHERE user_id = @user_id AND revoked_at IS NULL
+          AND expires_at > CURRENT_TIMESTAMP
+        ORDER BY created_at DESC
+      '''),
+      parameters: {'user_id': userId},
+    );
+    return [
+      for (final row in result)
+        {
+          'id': row[0],
+          'device_id': row[1],
+          'device_name': row[2],
+          'user_agent': row[3],
+          'created_at': row[4].toString(),
+          'expires_at': row[5].toString(),
+          'last_used_at': row[6]?.toString(),
+        },
+    ];
   }
 
   Future<int> revokeAll(String userId) async {

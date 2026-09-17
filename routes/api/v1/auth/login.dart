@@ -83,8 +83,12 @@ FutureOr<Response> onRequest(RequestContext context) async {
     final session =
         await SessionService(
           pool,
-          accessTokenGenerator: (userId) =>
-              JwtUtils.generate(userId, tokenVersion: tokenVersion),
+          accessTokenGenerator: (userId, sessionId, tokenVersion) =>
+              JwtUtils.generate(
+                userId,
+                tokenVersion: tokenVersion,
+                sessionId: sessionId,
+              ),
         ).createSession(
           userId: id,
           deviceId: deviceId,
