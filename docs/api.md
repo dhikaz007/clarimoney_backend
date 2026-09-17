@@ -113,7 +113,24 @@ Validation:
 - `device_id` required, non-empty, maximum 255 characters.
 - `device_name` optional.
 - Email duplicate returns `409`.
-- Missing or invalid `device_id` returns `400`.
+- Missing or invalid `device_id` returns `400`:
+
+```json
+{
+  "status_code": 400,
+  "message": "device_id must be a non-empty string of 255 characters or fewer",
+  "data": null
+}
+```
+- Non-string `device_name` returns `400`:
+
+```json
+{
+  "status_code": 400,
+  "message": "device_name must be a string",
+  "data": null
+}
+```
 
 ### `POST /api/v1/auth/login`
 
@@ -147,7 +164,20 @@ Success `200`:
 }
 ```
 
-Invalid credentials return `401`. Missing or invalid `device_id` returns `400`.
+Invalid credentials return `401`:
+
+```json
+{
+  "status_code": 401,
+  "message": "Invalid email or password",
+  "data": null
+}
+```
+
+Missing or invalid `device_id` returns `400` with message
+`device_id must be a non-empty string of 255 characters or fewer`.
+Non-string `device_name` returns `400` with message
+`device_name must be a string`.
 
 ## Categories API
 

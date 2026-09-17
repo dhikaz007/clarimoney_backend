@@ -38,7 +38,14 @@ FutureOr<Response> onRequest(RequestContext context) async {
     if (deviceId == null || deviceId.isEmpty || deviceId.length > 255) {
       return apiResponse(
         statusCode: HttpStatus.badRequest,
-        message: 'Device ID required',
+        message:
+            'device_id must be a non-empty string of 255 characters or fewer',
+      );
+    }
+    if (body.containsKey('device_name') && body['device_name'] is! String) {
+      return apiResponse(
+        statusCode: HttpStatus.badRequest,
+        message: 'device_name must be a string',
       );
     }
 
@@ -59,20 +66,22 @@ FutureOr<Response> onRequest(RequestContext context) async {
     final id = const Uuid().v4();
     final hash = PasswordUtils.hash(password);
 
-    await pool.execute(
-      Sql.named('''
-        INSERT INTO users (id, email, password_hash) 
-        VALUES (@id, @email, @hash)
-      '''),
-      parameters: {'id': id, 'email': email, 'hash': hash},
-    );
-
-    final session = await SessionService(pool).createSession(
-      userId: id,
-      deviceId: deviceId,
-      deviceName: deviceName,
-      userAgent: context.request.headers['user-agent'],
-    );
+    final session = await pool.runTx((transaction) async {
+      await transaction.execute(
+        Sql.named('''
+          INSERT INTO users (id, email, password_hash) 
+          VALUES (@id, @email, @hash)
+        '''),
+        parameters: {'id': id, 'email': email, 'hash': hash},
+      );
+      return SessionService(pool).createSessionInTransaction(
+        transaction,
+        userId: id,
+        deviceId: deviceId,
+        deviceName: deviceName,
+        userAgent: context.request.headers['user-agent'],
+      );
+    });
 
     return apiResponse(
       statusCode: HttpStatus.created,

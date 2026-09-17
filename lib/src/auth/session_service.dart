@@ -20,6 +20,24 @@ class SessionService {
     required String deviceId,
     String? deviceName,
     String? userAgent,
+  }) {
+    return _pool.runTx(
+      (session) => createSessionInTransaction(
+        session,
+        userId: userId,
+        deviceId: deviceId,
+        deviceName: deviceName,
+        userAgent: userAgent,
+      ),
+    );
+  }
+
+  Future<Map<String, String>> createSessionInTransaction(
+    Session session, {
+    required String userId,
+    required String deviceId,
+    String? deviceName,
+    String? userAgent,
   }) async {
     final sessionId = _uuid.v4();
     final refreshToken = RefreshTokenUtils.generate();
@@ -28,10 +46,9 @@ class SessionService {
     final expiresAt = now.add(refreshTokenLifetime);
     late String persistedSessionId;
 
-    await _pool.runTx((session) async {
-      // Device uniqueness means new login replaces prior device session.
-      final result = await session.execute(
-        Sql.named('''
+    // Device uniqueness means new login replaces prior device session.
+    final result = await session.execute(
+      Sql.named('''
           INSERT INTO user_sessions
             (id, user_id, device_id, device_name, user_agent,
              refresh_token_hash, expires_at)
@@ -47,40 +64,39 @@ class SessionService {
             last_used_at = NULL
           RETURNING id
         '''),
-        parameters: {
-          'id': sessionId,
-          'user_id': userId,
-          'device_id': deviceId,
-          'device_name': deviceName,
-          'user_agent': userAgent,
-          'refresh_token_hash': RefreshTokenUtils.hash(refreshToken),
-          'expires_at': expiresAt,
-        },
-      );
-      if (result.isEmpty || result.first[0] is! String) {
-        throw StateError('Session insert failed');
-      }
-      persistedSessionId = result.first[0] as String;
-      await session.execute(
-        Sql.named('''
+      parameters: {
+        'id': sessionId,
+        'user_id': userId,
+        'device_id': deviceId,
+        'device_name': deviceName,
+        'user_agent': userAgent,
+        'refresh_token_hash': RefreshTokenUtils.hash(refreshToken),
+        'expires_at': expiresAt,
+      },
+    );
+    if (result.isEmpty || result.first[0] is! String) {
+      throw StateError('Session insert failed');
+    }
+    persistedSessionId = result.first[0] as String;
+    await session.execute(
+      Sql.named('''
           UPDATE refresh_token_history
           SET consumed_at = COALESCE(consumed_at, @consumed_at)
           WHERE session_id = @session_id AND consumed_at IS NULL
         '''),
-        parameters: {'consumed_at': now, 'session_id': persistedSessionId},
-      );
-      await session.execute(
-        Sql.named('''
+      parameters: {'consumed_at': now, 'session_id': persistedSessionId},
+    );
+    await session.execute(
+      Sql.named('''
           INSERT INTO refresh_token_history (token_hash, session_id, expires_at)
           VALUES (@token_hash, @session_id, @expires_at)
         '''),
-        parameters: {
-          'token_hash': RefreshTokenUtils.hash(refreshToken),
-          'session_id': persistedSessionId,
-          'expires_at': expiresAt,
-        },
-      );
-    });
+      parameters: {
+        'token_hash': RefreshTokenUtils.hash(refreshToken),
+        'session_id': persistedSessionId,
+        'expires_at': expiresAt,
+      },
+    );
 
     return {
       'sessionId': persistedSessionId,

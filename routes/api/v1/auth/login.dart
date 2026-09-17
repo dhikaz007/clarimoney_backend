@@ -35,7 +35,14 @@ FutureOr<Response> onRequest(RequestContext context) async {
     if (deviceId == null || deviceId.isEmpty || deviceId.length > 255) {
       return apiResponse(
         statusCode: HttpStatus.badRequest,
-        message: 'Device ID required',
+        message:
+            'device_id must be a non-empty string of 255 characters or fewer',
+      );
+    }
+    if (body.containsKey('device_name') && body['device_name'] is! String) {
+      return apiResponse(
+        statusCode: HttpStatus.badRequest,
+        message: 'device_name must be a string',
       );
     }
 
