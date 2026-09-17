@@ -1,0 +1,10 @@
+.dart_tool
+build
+.env
+.env.*
+!.env.example
+test
+coverage
+.git
+.idea
+.vscode

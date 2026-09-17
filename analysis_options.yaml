@@ -1,0 +1,19 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - build/**
+    - routes/api/v1/transactions/[id].dart
+
+linter:
+  rules:
+    file_names: false
+    prefer_relative_imports: true
+    prefer_const_constructors: true
+    sort_child_properties_last: true
+    avoid_redundant_argument_values: true
+    avoid_unnecessary_containers: true
+    use_key_in_widget_constructors: true
+    use_build_context_synchronously: true
+    await_only_futures: true
+    unnecessary_async: true

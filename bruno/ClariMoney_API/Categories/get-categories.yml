@@ -1,0 +1,63 @@
+info:
+  name: Get Categories
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{base_url}}/api/v1/categories"
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+tests: |
+  test("Status is 200", () => {
+    expect(res.status).to.equal(200);
+  });
+  test("Returns array", () => {
+    expect(res.body.data).to.be.an("array");
+  });
+
+examples:
+  - name: Success
+    status: 200
+    headers:
+      content-type: application/json
+    body: |
+      {
+        "status_code": 200,
+        "message": "Categories fetched successfully",
+        "data": [
+          {
+            "id": "cat-001-food",
+            "name": "Food",
+            "icon": "restaurant",
+            "color": "#FF7043",
+            "type": "expense"
+          },
+          {
+            "id": "cat-002-transport",
+            "name": "Transport",
+            "icon": "directions_car",
+            "color": "#42A5F5",
+            "type": "expense"
+          },
+          {
+            "id": "cat-003-subscriptions",
+            "name": "Subscriptions",
+            "icon": "subscriptions",
+            "color": "#7E57C2",
+            "type": "expense"
+          }
+        ]
+      }
+
+  - name: Unauthorized
+    status: 401
+    headers:
+      content-type: application/json
+    body: |
+      {
+        "status_code": 401,
+        "message": "Missing or invalid token"
+      }

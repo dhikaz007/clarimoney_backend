@@ -1,0 +1,71 @@
+info:
+  name: Create Category
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{base_url}}/api/v1/categories"
+  auth:
+    type: bearer
+    token: "{{token}}"
+  body:
+    type: json
+    data: |
+      {
+        "name": "Subscriptions",
+        "icon": "subscriptions",
+        "color": "#7E57C2",
+        "type": "expense"
+      }
+
+postScript: |
+  if (res.status === 201) {
+    bru.setVar("category_id", res.body.data.id);
+  }
+
+tests: |
+  test("Status is 201", () => {
+    expect(res.status).to.equal(201);
+  });
+  test("Returns id", () => {
+    expect(res.body.data).to.have.property("id");
+  });
+
+examples:
+  - name: Success
+    status: 201
+    headers:
+      content-type: application/json
+    body: |
+      {
+        "status_code": 201,
+        "message": "Category created successfully",
+        "data": {
+          "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "name": "Subscriptions",
+          "icon": "subscriptions",
+          "color": "#7E57C2",
+          "type": "expense"
+        }
+      }
+
+  - name: Category already exists
+    status: 409
+    headers:
+      content-type: application/json
+    body: |
+      {
+        "status_code": 409,
+        "message": "Category already exists"
+      }
+
+  - name: Invalid color format
+    status: 400
+    headers:
+      content-type: application/json
+    body: |
+      {
+        "status_code": 400,
+        "message": "Color must use #RRGGBB format"
+      }

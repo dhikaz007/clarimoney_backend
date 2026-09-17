@@ -1,0 +1,16 @@
+info:
+  name: Production
+  type: environment
+
+variables:
+  - name: base_url
+    value: https://clarimoney-backend.onrender.com
+    description: Production server on Render
+  - name: token
+    value: ""
+  - name: user_id
+    value: ""
+  - name: category_id
+    value: ""
+  - name: transaction_id
+    value: ""

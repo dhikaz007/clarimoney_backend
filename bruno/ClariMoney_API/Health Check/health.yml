@@ -1,0 +1,32 @@
+info:
+  name: Health Check
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{base_url}}/"
+  auth:
+    type: none
+
+tests: |
+  test("Status is 200", () => {
+    expect(res.status).to.equal(200);
+  });
+  test("DB is connected", () => {
+    expect(res.body.data.db).to.equal("connected");
+  });
+
+examples:
+  - name: Success
+    status: 200
+    headers:
+      content-type: application/json
+    body: |
+      {
+        "status_code": 200,
+        "message": "ClariMoney backend active",
+        "data": {
+          "db": "connected"
+        }
+      }

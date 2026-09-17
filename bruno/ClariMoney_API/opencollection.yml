@@ -1,0 +1,12 @@
+opencollection: 1.0.0
+
+info:
+  name: ClariMoney API
+  description: Money tracker backend API collection
+
+extensions:
+  bruno:
+    defaultEnvironment: Local
+    ignore:
+      - node_modules
+      - .git

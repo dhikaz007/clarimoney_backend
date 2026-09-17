@@ -1,0 +1,72 @@
+info:
+  name: Register
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{base_url}}/api/v1/auth/register"
+  auth:
+    type: none
+  body:
+    type: json
+    data: |
+      {
+        "email": "test@example.com",
+        "password": "password123"
+      }
+
+runtime:
+  scripts:
+    - type: after-response
+      code: |
+        if (res.status === 201) {
+          bru.setEnvVar("token", res.body.data.token);
+          bru.setEnvVar("user_id", res.body.data.user.id);
+        }
+
+tests: |
+  test("Status is 201", () => {
+    expect(res.status).to.equal(201);
+  });
+  test("Returns token", () => {
+    expect(res.body.data.token).to.be.a("string");
+  });
+
+examples:
+  - name: Success
+    status: 201
+    headers:
+      content-type: application/json
+    body: |
+      {
+        "status_code": 201,
+        "message": "Registration successful",
+        "data": {
+          "user": {
+            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            "email": "test@example.com"
+          },
+          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhMWIyYzNkNC1lNWY2LTc4OTAtYWJjZC1lZjEyMzQ1Njc4OTAiLCJpYXQiOjE2OTQwMDAwMDAsImV4cCI6MTY5NDYwNDgwMH0.XYZ123..."
+        }
+      }
+
+  - name: Email already registered
+    status: 409
+    headers:
+      content-type: application/json
+    body: |
+      {
+        "status_code": 409,
+        "message": "Email already registered"
+      }
+
+  - name: Invalid email
+    status: 400
+    headers:
+      content-type: application/json
+    body: |
+      {
+        "status_code": 400,
+        "message": "Valid email and password of at least 8 characters required"
+      }

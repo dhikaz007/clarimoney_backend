@@ -1,0 +1,13 @@
+name: local
+variables:
+  - name: base_url
+    value: http://localhost:8080
+    description: Local development server
+  - name: token
+    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYWY5MDI5MC0xYTMwLTQzYTUtODMyOC04YmJjY2FiOTJhNzQiLCJ2ZXIiOjIsImlhdCI6MTc4OTY2MzkzNiwiZXhwIjoxNzkwMjY4NzM2fQ.5L--FQU-x3S6saqT5r74lE8LU4OlGY9jGKP7E-gaAiA
+  - name: user_id
+    value: daf90290-1a30-43a5-8328-8bbccab92a74
+  - name: category_id
+    value: ""
+  - name: transaction_id
+    value: ""
