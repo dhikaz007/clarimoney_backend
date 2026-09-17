@@ -12,7 +12,7 @@ Implemented Bruno auth collection updates.
 
 ## Commit
 
-Pending.
+`9cf3300` (`test: update Bruno auth session collection`)
 
 ## Tests
 
