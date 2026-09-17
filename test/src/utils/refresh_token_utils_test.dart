@@ -9,7 +9,7 @@ void main() {
 
       expect(first, isNot(equals(second)));
       expect(first, matches(RegExp(r'^[A-Za-z0-9_-]+$')));
-      expect(first.length, greaterThan(40));
+      expect(first.length, equals(43));
     });
 
     test('returns stable SHA-256 hex digest', () {

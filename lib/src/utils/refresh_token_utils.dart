@@ -5,7 +5,8 @@ import 'package:crypto/crypto.dart';
 
 class RefreshTokenUtils {
   static String generate() {
-    final bytes = List<int>.generate(32, (_) => Random.secure().nextInt(256));
+    final random = Random.secure();
+    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
     return base64Url.encode(bytes).replaceAll('=', '');
   }
 

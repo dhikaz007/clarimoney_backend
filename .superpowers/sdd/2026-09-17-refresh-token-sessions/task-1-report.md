@@ -43,3 +43,9 @@ Commands:
 ## Constraints
 
 No unrelated files changed. Neon migration remains unapplied and needs rerun with valid `DATABASE_URL`.
+
+## Review Fixes
+
+- Reused one `Random.secure()` instance per generated token.
+- Strengthened token test to require exact 43-character unpadded Base64URL output.
+- Applied `migrations/004_user_sessions.sql` to configured Neon database from `.env` with `ON_ERROR_STOP=1`.
