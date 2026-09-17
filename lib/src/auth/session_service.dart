@@ -5,10 +5,14 @@ import '../utils/jwt_utils.dart';
 import '../utils/refresh_token_utils.dart';
 
 class SessionService {
-  SessionService(this._pool);
+  SessionService(
+    this._pool, {
+    String Function(String userId)? accessTokenGenerator,
+  }) : _accessTokenGenerator = accessTokenGenerator ?? JwtUtils.generate;
 
   static const refreshTokenLifetime = Duration(days: 30);
   final Pool<dynamic> _pool;
+  final String Function(String userId) _accessTokenGenerator;
   final Uuid _uuid = const Uuid();
 
   Future<Map<String, String>> createSession({
@@ -19,7 +23,7 @@ class SessionService {
   }) async {
     final sessionId = _uuid.v4();
     final refreshToken = RefreshTokenUtils.generate();
-    final accessToken = JwtUtils.generate(userId);
+    final accessToken = _accessTokenGenerator(userId);
     final now = DateTime.now().toUtc();
     final expiresAt = now.add(refreshTokenLifetime);
     late String persistedSessionId;
@@ -131,7 +135,7 @@ class SessionService {
         return null;
       }
 
-      final accessToken = JwtUtils.generate(userId);
+      final accessToken = _accessTokenGenerator(userId);
       final update = await session.execute(
         Sql.named('''
           UPDATE user_sessions

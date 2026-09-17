@@ -25,6 +25,22 @@ Implemented access-token expiry and session lifecycle service.
 
 ## Review Fixes
 
+- Added Neon-backed concurrent reuse test. Two simultaneous rotations yield one token pair; second request detects consumed history row and revokes session.
+- Added Neon-backed invalid-JWT test using injected generator; transaction leaves no active session after generator failure.
+- Added `SessionService` generator injection without changing runtime default.
+- Documented migrations 001–005 in `README.md` and `migrations/README.md`.
+- Reapplied migration 005 to Neon successfully; idempotent notices expected, `INSERT 0 0`.
+
+## Review Test Results
+
+- `rtk dart analyze` — passed.
+- Full suite with `.env` credentials — passed; 15 tests.
+- Neon-backed concurrent reuse test — passed.
+- Neon-backed invalid-JWT rollback test — passed.
+- `rtk git diff --check` — passed.
+
+## Review Fixes
+
 - Added `migrations/005_refresh_token_history.sql`: durable token history with consumed state, session linkage, expiry, index, and existing-session backfill.
 - Rotation locks history rows, consumes presented tokens, records replacement tokens, checks `RETURNING` and `affectedRows`, and revokes session on reuse or failed state transition.
 - Concurrent reuse serializes on row lock; second request sees consumed token and revokes current session.
