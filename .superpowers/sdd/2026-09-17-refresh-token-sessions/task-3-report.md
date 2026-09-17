@@ -44,3 +44,12 @@ Plain `dart test` fails existing JWT tests when `JWT_SECRET` is unset. Authentic
 - `dart analyze` — passed.
 - `JWT_SECRET='test-secret-with-at-least-32-characters' dart test` — passed: 25 passed, 7 skipped.
 - No migration changes needed; existing `004_user_sessions.sql` supports required behavior.
+
+## Final Review Fix
+
+- Corrected same-device test to match intentional SQL upsert behavior: `session_id` remains stable.
+- Test now verifies refresh-token rotation, metadata update, one active session, old refresh-token rejection, and session revocation on reuse.
+
+## Final Verification
+
+- `dart test test/routes/auth_routes_test.dart` — passed: 16 passed, 4 skipped.
