@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:dart_frog_test/dart_frog_test.dart';
 import 'package:clarimoney_backend/src/utils/password_utils.dart';
+import 'package:clarimoney_backend/src/auth/session_service.dart';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 import 'package:uuid/uuid.dart';
@@ -272,16 +273,30 @@ void main() {
               as Map<String, dynamic>;
       final sessions = await pool.execute(
         Sql.named(
-          'SELECT device_name FROM user_sessions WHERE user_id = @user_id AND device_id = @device_id',
+          'SELECT id, device_name FROM user_sessions WHERE user_id = @user_id AND device_id = @device_id',
         ),
         parameters: {'user_id': userId, 'device_id': 'same-device'},
       );
 
       expect(first.statusCode, HttpStatus.ok);
       expect(second.statusCode, HttpStatus.ok);
-      expect(firstData['session_id'], isNot(secondData['session_id']));
-      expect(sessions.single[0], 'New name');
+      expect(firstData['session_id'], secondData['session_id']);
+      expect(firstData['refresh_token'], isNot(secondData['refresh_token']));
+      expect(sessions.single[0], secondData['session_id']);
+      expect(sessions.single[1], 'New name');
       expect(sessions, hasLength(1));
+
+      expect(
+        await SessionService(
+          pool,
+        ).rotateRefreshToken(firstData['refresh_token'] as String),
+        isNull,
+      );
+      final revoked = await pool.execute(
+        Sql.named('SELECT revoked_at FROM user_sessions WHERE id = @id'),
+        parameters: {'id': secondData['session_id']},
+      );
+      expect(revoked.single[0], isNotNull);
     } finally {
       await _deleteUser(pool, userId);
       await pool.close();
