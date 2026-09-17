@@ -8,6 +8,18 @@ variables:
     description: Test/preview server on Render
   - name: token
     value: ""
+  - name: access_token
+    value: ""
+  - name: refresh_token
+    value: ""
+  - name: previous_refresh_token
+    value: ""
+  - name: session_id
+    value: ""
+  - name: device_id
+    value: bruno-test-device
+  - name: device_name
+    value: Bruno Test
   - name: user_id
     value: ""
   - name: category_id

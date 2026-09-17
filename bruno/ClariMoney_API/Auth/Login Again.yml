@@ -1,18 +1,21 @@
 info:
-  name: Refresh Token
+  name: Login Again
   type: http
-  seq: 4
+  seq: 10
 
 http:
   method: POST
-  url: "{{base_url}}/api/v1/auth/refresh"
+  url: "{{base_url}}/api/v1/auth/login"
   auth:
     type: none
   body:
     type: json
     data: |
       {
-        "refresh_token": "{{refresh_token}}"
+        "email": "test@example.com",
+        "password": "password123",
+        "device_id": "{{device_id}}",
+        "device_name": "{{device_name}}"
       }
 
 runtime:
@@ -20,17 +23,18 @@ runtime:
     - type: after-response
       code: |
         if (res.status === 200) {
-          bru.setEnvVar("previous_refresh_token", bru.getEnvVar("refresh_token"));
           bru.setEnvVar("access_token", res.body.data.access_token);
           bru.setEnvVar("token", res.body.data.access_token);
           bru.setEnvVar("refresh_token", res.body.data.refresh_token);
+          bru.setEnvVar("session_id", res.body.data.session_id);
+          bru.setEnvVar("user_id", res.body.data.user.id);
         }
 
 tests: |
-  test("Status is 200", () => {
+  test("Login succeeds", () => {
     expect(res.status).to.equal(200);
   });
-  test("Returns rotated tokens", () => {
-    expect(res.body.data.access_token).to.be.a("string");
+  test("Persists fresh session state", () => {
+    expect(res.body.data.session_id).to.be.a("string");
     expect(res.body.data.refresh_token).to.be.a("string");
   });

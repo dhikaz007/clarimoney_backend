@@ -54,7 +54,10 @@ examples:
             "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             "email": "test@example.com"
           },
-          "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhMWIyYzNkNC1lNWY2LTc4OTAtYWJjZC1lZjEyMzQ1Njc4OTAiLCJpYXQiOjE2OTQwMDAwMDAsImV4cCI6MTY5NDYwNDgwMH0.XYZ123..."
+          "access_token": "access-token-example",
+          "refresh_token": "refresh-token-example",
+          "session_id": "session-001",
+          "token": "access-token-example"
         }
       }
 

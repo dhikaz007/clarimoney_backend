@@ -1,7 +1,7 @@
 info:
   name: Revoke Device
   type: http
-  seq: 6
+  seq: 7
 
 http:
   method: DELETE

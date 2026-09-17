@@ -9,6 +9,8 @@ variables:
     value: ""
   - name: refresh_token
     value: ""
+  - name: previous_refresh_token
+    value: ""
   - name: session_id
     value: ""
   - name: device_id
