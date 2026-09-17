@@ -1,5 +1,5 @@
 info:
-  name: Logout All Devices
+  name: Logout Current Device
   type: http
   seq: 3
 
@@ -8,7 +8,7 @@ http:
   url: "{{base_url}}/api/v1/auth/logout"
   auth:
     type: bearer
-    token: "{{token}}"
+    token: "{{access_token}}"
 
 tests: |
   test("Status is 200", () => {
@@ -23,6 +23,6 @@ examples:
     body: |
       {
         "status_code": 200,
-        "message": "Logged out from all devices",
+        "message": "Logged out successfully",
         "data": null
       }

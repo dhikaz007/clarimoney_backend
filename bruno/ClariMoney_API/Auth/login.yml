@@ -13,7 +13,9 @@ http:
     data: |
       {
         "email": "test@example.com",
-        "password": "password123"
+        "password": "password123",
+        "device_id": "{{device_id}}",
+        "device_name": "{{device_name}}"
       }
 
 runtime:
@@ -21,7 +23,10 @@ runtime:
     - type: after-response
       code: |
         if (res.status === 200) {
-          bru.setEnvVar("token", res.body.data.token);
+          bru.setEnvVar("access_token", res.body.data.access_token);
+          bru.setEnvVar("token", res.body.data.access_token);
+          bru.setEnvVar("refresh_token", res.body.data.refresh_token);
+          bru.setEnvVar("session_id", res.body.data.session_id);
           bru.setEnvVar("user_id", res.body.data.user.id);
         }
 
@@ -30,7 +35,9 @@ tests: |
     expect(res.status).to.equal(200);
   });
   test("Returns token", () => {
-    expect(res.body.data.token).to.be.a("string");
+    expect(res.body.data.access_token).to.be.a("string");
+    expect(res.body.data.refresh_token).to.be.a("string");
+    expect(res.body.data.session_id).to.be.a("string");
   });
 
 examples:

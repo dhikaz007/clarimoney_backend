@@ -1,0 +1,16 @@
+info:
+  name: Logout All Devices
+  type: http
+  seq: 7
+
+http:
+  method: POST
+  url: "{{base_url}}/api/v1/auth/logout-all"
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+
+tests: |
+  test("Status is 200", () => {
+    expect(res.status).to.equal(200);
+  });
