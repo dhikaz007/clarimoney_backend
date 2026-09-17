@@ -3,6 +3,8 @@ import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:dart_frog_test/dart_frog_test.dart';
+import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:clarimoney_backend/src/utils/password_utils.dart';
 import 'package:clarimoney_backend/src/auth/session_service.dart';
 import 'package:clarimoney_backend/src/auth_middleware.dart';
@@ -13,10 +15,15 @@ import 'package:uuid/uuid.dart';
 
 import '../../routes/api/v1/auth/login.dart' as login;
 import '../../routes/api/v1/auth/logout/index.dart' as logout;
+import '../../routes/api/v1/auth/logout/_middleware.dart' as logout_middleware;
 import '../../routes/api/v1/auth/logout_all/index.dart' as logout_all;
 import '../../routes/api/v1/auth/refresh.dart' as refresh;
 import '../../routes/api/v1/auth/sessions/[id].dart' as session_id;
+import '../../routes/api/v1/auth/sessions/_middleware.dart'
+    as sessions_middleware;
 import '../../routes/api/v1/auth/register.dart' as register;
+
+class _MockAuthRequestContext extends Mock implements RequestContext {}
 
 void main() {
   test('register rejects invalid credentials before database access', () async {
@@ -475,6 +482,96 @@ void main() {
       await pool.close();
     }
   }, skip: _skipDbTest);
+
+  test(
+    'session revoke middleware denies cross-user target ownership',
+    () async {
+      final pool = _pool();
+      final ownerId = const Uuid().v4();
+      final otherId = const Uuid().v4();
+      try {
+        await _insertUser(pool, ownerId, password: 'password123');
+        await _insertUser(pool, otherId, password: 'password123');
+        final owner = await login.onRequest(_loginRequest(ownerId, pool));
+        final other = await login.onRequest(_loginRequest(otherId, pool));
+        final ownerData =
+            (await owner.json() as Map<String, dynamic>)['data']
+                as Map<String, dynamic>;
+        final otherData =
+            (await other.json() as Map<String, dynamic>)['data']
+                as Map<String, dynamic>;
+        final request = _MockAuthRequestContext();
+        when(() => request.request).thenReturn(
+          Request(
+            'DELETE',
+            Uri.parse(
+              'https://test.com/api/v1/auth/sessions/${ownerData['session_id']}',
+            ),
+            headers: {'authorization': 'Bearer ${otherData['access_token']}'},
+          ),
+        );
+        when(() => request.provide<String>(any())).thenReturn(request);
+        when(() => request.provide<AuthSession>(any())).thenReturn(request);
+        when(() => request.read<Pool<dynamic>>()).thenReturn(pool);
+        when(() => request.read<String>()).thenReturn(otherId);
+        when(
+          () => request.read<AuthSession>(),
+        ).thenReturn(AuthSession(otherId, otherData['session_id'] as String));
+        final response = await sessions_middleware.middleware(
+          (context) =>
+              session_id.onRequest(context, ownerData['session_id'] as String),
+        )(request);
+        final target = await pool.execute(
+          Sql.named('SELECT revoked_at FROM user_sessions WHERE id = @id'),
+          parameters: {'id': ownerData['session_id']},
+        );
+
+        expect(response.statusCode, HttpStatus.ok);
+        expect(target.single[0], isNull);
+      } finally {
+        await _deleteUser(pool, ownerId);
+        await _deleteUser(pool, otherId);
+        await pool.close();
+      }
+    },
+    skip: _skipDbTest,
+  );
+
+  test('expired access token remains rejected for logout', () async {
+    final pool = _pool();
+    final userId = const Uuid().v4();
+    try {
+      await _insertUser(pool, userId, password: 'password123');
+      final loggedIn = await login.onRequest(_loginRequest(userId, pool));
+      final data =
+          (await loggedIn.json() as Map<String, dynamic>)['data']
+              as Map<String, dynamic>;
+      final claims = JwtUtils.verifyClaims(data['access_token'] as String)!;
+      final expired = JWT({
+        ...claims,
+        'exp':
+            DateTime.now()
+                .subtract(const Duration(minutes: 1))
+                .millisecondsSinceEpoch ~/
+            1000,
+      }).sign(SecretKey(Platform.environment['JWT_SECRET']!));
+      final response = await logout_middleware.middleware(logout.onRequest)(
+        _requestWithPool(
+          TestRequestContext(
+            path: '/api/v1/auth/logout',
+            method: HttpMethod.post,
+            headers: {'authorization': 'Bearer $expired'},
+          ),
+          pool,
+        ),
+      );
+
+      expect(response.statusCode, HttpStatus.unauthorized);
+    } finally {
+      await _deleteUser(pool, userId);
+      await pool.close();
+    }
+  }, skip: _skipDbTest);
 }
 
 RequestContext _loginRequest(String userId, Pool<dynamic> pool) => _withPool(
@@ -494,6 +591,11 @@ RequestContext _withPool(TestRequestContext request, Pool<dynamic> pool) {
   request.provide<Pool<dynamic>>(pool);
   return request.context;
 }
+
+RequestContext _requestWithPool(
+  TestRequestContext request,
+  Pool<dynamic> pool,
+) => _withPool(request, pool);
 
 Pool<dynamic> _pool() {
   final url = Uri.parse(Platform.environment['DATABASE_URL']!);

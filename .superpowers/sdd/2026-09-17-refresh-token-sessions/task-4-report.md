@@ -26,3 +26,9 @@
 - Documented expired access-token logout behavior: retry remains rejected after expiry; fresh authentication required.
 - Applied migration `006_session_id_rotation.sql` to configured Neon database.
 - Verification: repo `.env` values loaded explicitly; Neon-backed `dart test` passed, 36 tests. `dart analyze` passed with one existing info. `dart_frog build` passed.
+
+## Final Re-review Fixes
+
+- Added end-to-end session route middleware test using another user's signed access JWT; target owner's active session remains unrevoked.
+- Added expired access-token logout regression test; signed token with expired `exp` returns `401` before logout handler execution.
+- Neon-backed verification: `dart test` passed, 38 tests; `.env` credentials supplied explicitly. `dart analyze` passed with 2 existing infos. `dart_frog build` passed.
