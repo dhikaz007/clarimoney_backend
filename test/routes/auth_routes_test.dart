@@ -5,11 +5,22 @@ import 'package:dart_frog/dart_frog.dart';
 import 'package:dart_frog_test/dart_frog_test.dart';
 import 'package:clarimoney_backend/src/utils/password_utils.dart';
 import 'package:clarimoney_backend/src/auth/session_service.dart';
+import 'package:clarimoney_backend/src/auth_middleware.dart';
+import 'package:clarimoney_backend/src/utils/jwt_utils.dart';
 import 'package:postgres/postgres.dart';
 import 'package:test/test.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../routes/api/v1/auth/login.dart' as login;
+import '../../routes/api/v1/auth/logout/index.dart' as logout;
+import '../../routes/api/v1/auth/logout/_middleware.dart' as logout_middleware;
+import '../../routes/api/v1/auth/logout_all/index.dart' as logout_all;
+import '../../routes/api/v1/auth/logout_all/_middleware.dart'
+    as logout_all_middleware;
+import '../../routes/api/v1/auth/refresh.dart' as refresh;
+import '../../routes/api/v1/auth/sessions/[id].dart' as session_id;
+import '../../routes/api/v1/auth/sessions/_middleware.dart'
+    as sessions_middleware;
 import '../../routes/api/v1/auth/register.dart' as register;
 
 void main() {
@@ -280,7 +291,7 @@ void main() {
 
       expect(first.statusCode, HttpStatus.ok);
       expect(second.statusCode, HttpStatus.ok);
-      expect(firstData['session_id'], secondData['session_id']);
+      expect(firstData['session_id'], isNot(secondData['session_id']));
       expect(firstData['refresh_token'], isNot(secondData['refresh_token']));
       expect(sessions.single[0], secondData['session_id']);
       expect(sessions.single[1], 'New name');
@@ -297,12 +308,169 @@ void main() {
         parameters: {'id': secondData['session_id']},
       );
       expect(revoked.single[0], isNotNull);
+
+      final oldAccess = JwtUtils.verifyClaims(
+        firstData['access_token'] as String,
+      );
+      final oldAccessCheck =
+          await authMiddleware((_) async => Response(body: 'ok'))(
+            TestRequestContext(
+              path: '/api/v1/transactions',
+              headers: {'authorization': 'Bearer ${firstData['access_token']}'},
+            ).context.provide<Pool<dynamic>>(() => pool),
+          );
+      expect(oldAccess?['sid'], isNot(secondData['session_id']));
+      expect(oldAccessCheck.statusCode, HttpStatus.unauthorized);
+    } finally {
+      await _deleteUser(pool, userId);
+      await pool.close();
+    }
+  }, skip: _skipDbTest);
+
+  test('refresh rotates token and slides session expiry', () async {
+    final pool = _pool();
+    final userId = const Uuid().v4();
+    try {
+      await _insertUser(pool, userId, password: 'password123');
+      final loggedIn = await login.onRequest(_loginRequest(userId, pool));
+      final data =
+          (await loggedIn.json() as Map<String, dynamic>)['data']
+              as Map<String, dynamic>;
+      final before = await pool.execute(
+        Sql.named('SELECT expires_at FROM user_sessions WHERE id = @id'),
+        parameters: {'id': data['session_id']},
+      );
+      final response = await refresh.onRequest(
+        TestRequestContext(
+          path: '/api/v1/auth/refresh',
+          method: HttpMethod.post,
+          body: jsonEncode({'refresh_token': data['refresh_token']}),
+        ).context.provide<Pool<dynamic>>(() => pool),
+      );
+      final refreshed =
+          (await response.json() as Map<String, dynamic>)['data']
+              as Map<String, dynamic>;
+      final after = await pool.execute(
+        Sql.named('SELECT expires_at FROM user_sessions WHERE id = @id'),
+        parameters: {'id': data['session_id']},
+      );
+
+      expect(response.statusCode, HttpStatus.ok);
+      expect(refreshed['refresh_token'], isNot(data['refresh_token']));
+      expect(
+        after.single[0] as DateTime,
+        greaterThan(before.single[0] as DateTime),
+      );
+      expect(
+        await SessionService(
+          pool,
+        ).rotateRefreshToken(data['refresh_token'] as String),
+        isNull,
+      );
+    } finally {
+      await _deleteUser(pool, userId);
+      await pool.close();
+    }
+  }, skip: _skipDbTest);
+
+  test(
+    'current logout is idempotent and cross-user revoke is denied',
+    () async {
+      final pool = _pool();
+      final ownerId = const Uuid().v4();
+      final otherId = const Uuid().v4();
+      try {
+        await _insertUser(pool, ownerId, password: 'password123');
+        await _insertUser(pool, otherId, password: 'password123');
+        final owner = await login.onRequest(_loginRequest(ownerId, pool));
+        final other = await login.onRequest(_loginRequest(otherId, pool));
+        final ownerData =
+            (await owner.json() as Map<String, dynamic>)['data']
+                as Map<String, dynamic>;
+        final otherData =
+            (await other.json() as Map<String, dynamic>)['data']
+                as Map<String, dynamic>;
+        final handler = logout_middleware.middleware(logout.onRequest);
+        final request = (String token) => TestRequestContext(
+          path: '/api/v1/auth/logout',
+          method: HttpMethod.post,
+          headers: {'authorization': 'Bearer $token'},
+        ).context.provide<Pool<dynamic>>(() => pool);
+
+        expect(
+          (await handler(
+            request(ownerData['access_token'] as String),
+          )).statusCode,
+          HttpStatus.ok,
+        );
+        expect(
+          (await handler(
+            request(ownerData['access_token'] as String),
+          )).statusCode,
+          HttpStatus.ok,
+        );
+        final cross =
+            await sessions_middleware.middleware(
+              (context) => session_id.onRequest(
+                context,
+                ownerData['session_id'] as String,
+              ),
+            )(
+              TestRequestContext(
+                path: '/api/v1/auth/sessions/${ownerData['session_id']}',
+                method: HttpMethod.delete,
+                headers: {
+                  'authorization': 'Bearer ${otherData['access_token']}',
+                },
+              ).context.provide<Pool<dynamic>>(() => pool),
+            );
+
+        expect(cross.statusCode, HttpStatus.ok);
+        expect(otherData['session_id'], isNot(ownerData['session_id']));
+      } finally {
+        await _deleteUser(pool, ownerId);
+        await _deleteUser(pool, otherId);
+        await pool.close();
+      }
+    },
+    skip: _skipDbTest,
+  );
+
+  test('logout-all retry remains idempotent', () async {
+    final pool = _pool();
+    final userId = const Uuid().v4();
+    try {
+      await _insertUser(pool, userId, password: 'password123');
+      final loggedIn = await login.onRequest(_loginRequest(userId, pool));
+      final data =
+          (await loggedIn.json() as Map<String, dynamic>)['data']
+              as Map<String, dynamic>;
+      final handler = logout_all_middleware.middleware(logout_all.onRequest);
+      final request = TestRequestContext(
+        path: '/api/v1/auth/logout-all',
+        method: HttpMethod.post,
+        headers: {'authorization': 'Bearer ${data['access_token']}'},
+      ).context.provide<Pool<dynamic>>(() => pool);
+
+      expect((await handler(request)).statusCode, HttpStatus.ok);
+      expect((await handler(request)).statusCode, HttpStatus.ok);
     } finally {
       await _deleteUser(pool, userId);
       await pool.close();
     }
   }, skip: _skipDbTest);
 }
+
+RequestContext _loginRequest(String userId, Pool<dynamic> pool) =>
+    TestRequestContext(
+      path: '/api/v1/auth/login',
+      method: HttpMethod.post,
+      body: jsonEncode({
+        'email': '$userId@example.com',
+        'password': 'password123',
+        'device_id': userId,
+      }),
+    ).context.provide<Pool<dynamic>>(() => pool);
 
 Pool<dynamic> _pool() {
   final url = Uri.parse(Platform.environment['DATABASE_URL']!);

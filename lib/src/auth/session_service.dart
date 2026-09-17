@@ -61,8 +61,9 @@ class SessionService {
              refresh_token_hash, expires_at)
           VALUES (@id, @user_id, @device_id, @device_name, @user_agent,
                   @refresh_token_hash, @expires_at)
-          ON CONFLICT (user_id, device_id) DO UPDATE SET
-            device_name = EXCLUDED.device_name,
+           ON CONFLICT (user_id, device_id) DO UPDATE SET
+             id = EXCLUDED.id,
+             device_name = EXCLUDED.device_name,
             user_agent = EXCLUDED.user_agent,
             refresh_token_hash = EXCLUDED.refresh_token_hash,
             created_at = CURRENT_TIMESTAMP,
