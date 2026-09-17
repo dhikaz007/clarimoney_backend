@@ -1,7 +1,7 @@
 info:
   name: Protected Request After Logout All
   type: http
-  seq: 14
+  seq: 15
 
 http:
   method: GET

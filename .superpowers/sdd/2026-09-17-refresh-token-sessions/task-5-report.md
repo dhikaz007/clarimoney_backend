@@ -68,3 +68,19 @@ Implemented Bruno auth collection updates.
 - `dart analyze`: same 2 existing lint findings.
 - `dart_frog build`: pass.
 - `git diff --check`: pass.
+
+## Token Preconditions
+
+- Added second-device protected request before logout-all; requires HTTP 200.
+- Added assertion that `access_token_2` is populated, distinct from primary token, and not overwritten.
+- Sequence now runs second-device success check at `seq: 13`, logout-all at `seq: 14`, post-logout checks at `seq: 15-16`.
+
+## Token Preconditions Verification
+
+- YAML parse: pass, 27 files.
+- Bruno CLI lint: not run; `bru` unavailable.
+- `dart format --output=none --set-exit-if-changed lib routes test`: pass.
+- `JWT_SECRET='test-secret-with-at-least-32-characters' dart test`: pass, 25 tests.
+- `dart analyze`: same 2 existing lint findings.
+- `dart_frog build`: pass.
+- `git diff --check`: pass.

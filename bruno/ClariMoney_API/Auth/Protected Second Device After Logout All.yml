@@ -1,7 +1,7 @@
 info:
   name: Second Device After Logout All
   type: http
-  seq: 15
+  seq: 16
 
 http:
   method: GET
