@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
 
 class JwtUtils {
+  static const accessTokenLifetime = Duration(minutes: 15);
+
   static String get _secret {
     final secret = Platform.environment['JWT_SECRET'];
     if (secret == null || secret.length < 32) {
@@ -16,7 +18,7 @@ class JwtUtils {
       'ver': tokenVersion,
       'iat': DateTime.now().millisecondsSinceEpoch ~/ 1000,
       'exp':
-          DateTime.now().add(const Duration(days: 7)).millisecondsSinceEpoch ~/
+          DateTime.now().add(accessTokenLifetime).millisecondsSinceEpoch ~/
           1000,
     });
     return jwt.sign(SecretKey(_secret));
