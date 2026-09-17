@@ -25,6 +25,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/002_mvp_constraints.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/003_token_version.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/004_user_sessions.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/005_refresh_token_history.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/006_session_id_rotation.sql
 ```
 
 ## Verification
@@ -32,7 +33,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/005_refresh_token_history.
 ```bash
 dart format --output=none --set-exit-if-changed .
 dart analyze
-JWT_SECRET='test-secret-with-at-least-32-characters' dart test
+ JWT_SECRET="${JWT_SECRET:?export JWT_SECRET or load a shell-compatible .env}" dart test
 dart_frog build
 ```
 

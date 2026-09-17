@@ -149,6 +149,29 @@ void main() {
     expect(body['message'], 'device_name must be a string');
   });
 
+  for (final route in ['register', 'login']) {
+    test('$route rejects device name longer than 255 characters', () async {
+      final request = TestRequestContext(
+        path: '/api/v1/auth/$route',
+        method: HttpMethod.post,
+        body: jsonEncode({
+          'email': 'user@example.com',
+          'password': 'password123',
+          'device_id': 'device-id',
+          'device_name': 'x' * 256,
+        }),
+      );
+
+      final response = route == 'register'
+          ? await register.onRequest(request.context)
+          : await login.onRequest(request.context);
+      final body = await response.json() as Map<String, dynamic>;
+
+      expect(response.statusCode, HttpStatus.badRequest);
+      expect(body['message'], 'device_name must be 255 characters or fewer');
+    });
+  }
+
   test('register returns session response fields', () async {
     final pool = _pool();
     final userId = const Uuid().v4();
@@ -212,7 +235,7 @@ void main() {
     }
   }, skip: _skipDbTest);
 
-  test('register removes user when session creation fails', () async {
+  test('register rejects oversized device name before creating user', () async {
     final pool = _pool();
     final userId = const Uuid().v4();
     final email = '$userId@example.com';
@@ -229,7 +252,7 @@ void main() {
       );
       final response = await register.onRequest(_withPool(request, pool));
 
-      expect(response.statusCode, HttpStatus.internalServerError);
+      expect(response.statusCode, HttpStatus.badRequest);
       expect(
         await pool.execute(
           Sql.named('SELECT id FROM users WHERE id = @id'),

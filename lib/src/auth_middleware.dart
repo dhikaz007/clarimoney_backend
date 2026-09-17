@@ -50,7 +50,6 @@ Handler authMiddleware(Handler handler, {bool allowRevokedSession = false}) {
           JOIN user_sessions s ON s.user_id = u.id
           WHERE u.id = @id AND s.id = @session_id
             AND s.expires_at > CURRENT_TIMESTAMP
-            AND s.expires_at > CURRENT_TIMESTAMP
             AND (@allow_revoked OR s.revoked_at IS NULL)
         '''),
         parameters: {

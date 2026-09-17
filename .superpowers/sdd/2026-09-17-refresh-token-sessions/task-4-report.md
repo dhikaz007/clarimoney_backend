@@ -32,3 +32,12 @@
 - Added end-to-end session route middleware test using another user's signed access JWT; target owner's active session remains unrevoked.
 - Added expired access-token logout regression test; signed token with expired `exp` returns `401` before logout handler execution.
 - Neon-backed verification: `dart test` passed, 38 tests; `.env` credentials supplied explicitly. `dart analyze` passed with 2 existing infos. `dart_frog build` passed.
+
+## Whole-branch Cleanup
+
+- Listed migration 006 in root and migration README sequences.
+- Added `device_name` validation for register/login: optional string, trimmed, maximum 255 characters; oversized values return 400.
+- Removed duplicate middleware expiry predicate.
+- Documented verification requirement: `JWT_SECRET` must be exported or loaded before `dart test`; DB tests still skip when required env is absent.
+- Added register/login oversized `device_name` tests.
+- Neon-backed verification: `dart test` passed, 40 tests; `dart analyze` passed with 2 existing infos; `dart_frog build` passed; `git diff --check` passed.
