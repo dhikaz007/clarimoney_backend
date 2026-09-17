@@ -19,3 +19,9 @@ tests: |
   test("Old refresh token is rejected", () => {
     expect(res.status).to.equal(401);
   });
+
+examples:
+  - name: Unauthorized
+    status: 401
+    body: |
+      {"status_code": 401, "message": "Invalid refresh token"}

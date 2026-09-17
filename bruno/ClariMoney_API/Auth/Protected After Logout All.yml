@@ -1,7 +1,7 @@
 info:
   name: Protected Request After Logout All
   type: http
-  seq: 12
+  seq: 14
 
 http:
   method: GET
@@ -14,3 +14,9 @@ tests: |
   test("All-device logout rejects access", () => {
     expect(res.status).to.equal(401);
   });
+
+examples:
+  - name: Unauthorized
+    status: 401
+    body: |
+      {"status_code": 401, "message": "Missing or invalid token"}

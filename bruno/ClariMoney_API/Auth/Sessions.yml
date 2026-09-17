@@ -17,3 +17,19 @@ tests: |
   test("Returns sessions", () => {
     expect(res.body.data).to.be.an("array");
   });
+  test("Includes current session metadata", () => {
+    const session = res.body.data.find((item) => item.id === bru.getEnvVar("session_id"));
+    expect(session).to.exist;
+    expect(session.device_id).to.equal(bru.getEnvVar("device_id"));
+    expect(session.device_name).to.equal(bru.getEnvVar("device_name"));
+  });
+
+examples:
+  - name: Success
+    status: 200
+    body: |
+      {
+        "status_code": 200,
+        "message": "Sessions retrieved",
+        "data": [{"id": "session-001", "device_id": "bruno-local-device", "device_name": "Bruno Local", "user_agent": null, "created_at": "2026-09-17T00:00:00.000Z", "expires_at": "2026-10-17T00:00:00.000Z", "last_used_at": null}]
+      }

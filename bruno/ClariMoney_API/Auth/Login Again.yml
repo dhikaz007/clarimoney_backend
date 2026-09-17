@@ -1,7 +1,7 @@
 info:
   name: Login Again
   type: http
-  seq: 10
+  seq: 11
 
 http:
   method: POST
@@ -38,3 +38,9 @@ tests: |
     expect(res.body.data.session_id).to.be.a("string");
     expect(res.body.data.refresh_token).to.be.a("string");
   });
+
+examples:
+  - name: Success
+    status: 200
+    body: |
+      {"status_code": 200, "message": "Login successful", "data": {"user": {"id": "user-001", "email": "test@example.com"}, "access_token": "access-token-again", "refresh_token": "refresh-token-again", "session_id": "session-003", "token": "access-token-again"}}

@@ -13,6 +13,14 @@ variables:
     value: ""
   - name: session_id
     value: ""
+  - name: access_token_2
+    value: ""
+  - name: refresh_token_2
+    value: ""
+  - name: session_id_2
+    value: ""
+  - name: revoked_access_token
+    value: ""
   - name: device_id
     value: bruno-local-device
   - name: device_name

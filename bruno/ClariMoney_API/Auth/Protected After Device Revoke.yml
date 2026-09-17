@@ -1,17 +1,17 @@
 info:
-  name: Protected Request After Logout
+  name: Protected Request After Device Revoke
   type: http
-  seq: 10
+  seq: 8
 
 http:
   method: GET
   url: "{{base_url}}/api/v1/categories"
   auth:
     type: bearer
-    token: "{{access_token}}"
+    token: "{{revoked_access_token}}"
 
 tests: |
-  test("Logged-out access is rejected", () => {
+  test("Revoked device access is rejected", () => {
     expect(res.status).to.equal(401);
   });
 

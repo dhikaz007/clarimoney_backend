@@ -1,7 +1,7 @@
 info:
   name: Logout All Devices
   type: http
-  seq: 11
+  seq: 13
 
 http:
   method: POST
@@ -14,3 +14,9 @@ tests: |
   test("Status is 200", () => {
     expect(res.status).to.equal(200);
   });
+
+examples:
+  - name: Success
+    status: 200
+    body: |
+      {"status_code": 200, "message": "Logged out from all devices", "data": null}

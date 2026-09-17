@@ -34,3 +34,9 @@ tests: |
     expect(res.body.data.access_token).to.be.a("string");
     expect(res.body.data.refresh_token).to.be.a("string");
   });
+
+examples:
+  - name: Success
+    status: 200
+    body: |
+      {"status_code": 200, "message": "Token refreshed", "data": {"access_token": "access-token-refreshed", "refresh_token": "refresh-token-refreshed", "token": "access-token-refreshed"}}

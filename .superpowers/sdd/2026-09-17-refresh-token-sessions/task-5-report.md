@@ -49,3 +49,22 @@ Implemented Bruno auth collection updates.
 - `dart analyze`: same 2 existing lint findings.
 - `dart_frog build`: pass.
 - `git diff --check`: pass.
+
+## Final Review Follow-up
+
+- Added second-device login with isolated token/session state.
+- Added logout-all checks for both primary and second-device access tokens.
+- Added device-revoke follow-up protected request.
+- Sessions assertion now checks current session ID, device ID, and device name; owner is enforced by authenticated sessions endpoint scope.
+- Added examples to new refresh, session, revoke, logout, login, and verification requests.
+- Collection sequence now uses explicit `seq` ordering for stateful execution.
+
+## Final Review Verification
+
+- YAML parse: pass, 26 files.
+- Bruno CLI lint: not run; `bru` unavailable.
+- `dart format --output=none --set-exit-if-changed lib routes test`: pass.
+- `JWT_SECRET='test-secret-with-at-least-32-characters' dart test`: pass, 25 tests.
+- `dart analyze`: same 2 existing lint findings.
+- `dart_frog build`: pass.
+- `git diff --check`: pass.

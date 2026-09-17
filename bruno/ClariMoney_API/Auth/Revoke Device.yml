@@ -10,7 +10,19 @@ http:
     type: bearer
     token: "{{access_token}}"
 
+runtime:
+  scripts:
+    - type: before-request
+      code: |
+        bru.setEnvVar("revoked_access_token", bru.getEnvVar("access_token"));
+
 tests: |
   test("Status is 200", () => {
     expect(res.status).to.equal(200);
   });
+
+examples:
+  - name: Success
+    status: 200
+    body: |
+      {"status_code": 200, "message": "Session revoked", "data": null}
