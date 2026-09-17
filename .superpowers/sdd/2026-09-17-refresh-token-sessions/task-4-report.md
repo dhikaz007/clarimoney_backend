@@ -16,3 +16,13 @@
 - Added endpoint DB coverage for refresh rotation, current logout, logout-all, and cross-user revoke denial.
 - Added migration `006_session_id_rotation.sql` for FK update cascade required by session ID replacement.
 - Verification: `JWT_SECRET='test-secret-with-at-least-32-characters' dart test` passed; DB tests skipped because `DATABASE_URL` is unset. `dart analyze` passed with 3 style infos. `dart_frog build` passed.
+
+## Re-review Fixes
+
+- Documented sliding refresh policy: each successful rotation resets expiry to exactly 30 days from refresh time.
+- Added exact 30-day expiry assertions with two-second clock tolerance.
+- Cross-user revoke test now targets active owner session and asserts `revoked_at IS NULL` afterward.
+- Documented consumed refresh-token replay revocation as intentional theft protection.
+- Documented expired access-token logout behavior: retry remains rejected after expiry; fresh authentication required.
+- Applied migration `006_session_id_rotation.sql` to configured Neon database.
+- Verification: repo `.env` values loaded explicitly; Neon-backed `dart test` passed, 36 tests. `dart analyze` passed with one existing info. `dart_frog build` passed.

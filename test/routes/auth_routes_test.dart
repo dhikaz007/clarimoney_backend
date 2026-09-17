@@ -13,14 +13,9 @@ import 'package:uuid/uuid.dart';
 
 import '../../routes/api/v1/auth/login.dart' as login;
 import '../../routes/api/v1/auth/logout/index.dart' as logout;
-import '../../routes/api/v1/auth/logout/_middleware.dart' as logout_middleware;
 import '../../routes/api/v1/auth/logout_all/index.dart' as logout_all;
-import '../../routes/api/v1/auth/logout_all/_middleware.dart'
-    as logout_all_middleware;
 import '../../routes/api/v1/auth/refresh.dart' as refresh;
 import '../../routes/api/v1/auth/sessions/[id].dart' as session_id;
-import '../../routes/api/v1/auth/sessions/_middleware.dart'
-    as sessions_middleware;
 import '../../routes/api/v1/auth/register.dart' as register;
 
 void main() {
@@ -161,9 +156,7 @@ void main() {
           'device_name': 'Test device',
         }),
       );
-      final response = await register.onRequest(
-        request.context.provide<Pool<dynamic>>(() => pool),
-      );
+      final response = await register.onRequest(_withPool(request, pool));
       final body = await response.json() as Map<String, dynamic>;
       final data = body['data'] as Map<String, dynamic>;
 
@@ -196,9 +189,7 @@ void main() {
           'device_id': userId,
         }),
       );
-      final response = await login.onRequest(
-        request.context.provide<Pool<dynamic>>(() => pool),
-      );
+      final response = await login.onRequest(_withPool(request, pool));
       final body = await response.json() as Map<String, dynamic>;
       final data = body['data'] as Map<String, dynamic>;
 
@@ -229,9 +220,7 @@ void main() {
           'device_name': 'x' * 256,
         }),
       );
-      final response = await register.onRequest(
-        request.context.provide<Pool<dynamic>>(() => pool),
-      );
+      final response = await register.onRequest(_withPool(request, pool));
 
       expect(response.statusCode, HttpStatus.internalServerError);
       expect(
@@ -252,30 +241,30 @@ void main() {
     final userId = const Uuid().v4();
     try {
       await _insertUser(pool, userId, password: 'password123');
-      final first = await login.onRequest(
-        TestRequestContext(
-          path: '/api/v1/auth/login',
-          method: HttpMethod.post,
-          body: jsonEncode({
-            'email': '$userId@example.com',
-            'password': 'password123',
-            'device_id': 'same-device',
-            'device_name': 'Old name',
-          }),
-        ).context.provide<Pool<dynamic>>(() => pool),
+      final firstRequest = TestRequestContext(
+        path: '/api/v1/auth/login',
+        method: HttpMethod.post,
+        body: jsonEncode({
+          'email': '$userId@example.com',
+          'password': 'password123',
+          'device_id': 'same-device',
+          'device_name': 'Old name',
+        }),
       );
-      final second = await login.onRequest(
-        TestRequestContext(
-          path: '/api/v1/auth/login',
-          method: HttpMethod.post,
-          body: jsonEncode({
-            'email': '$userId@example.com',
-            'password': 'password123',
-            'device_id': 'same-device',
-            'device_name': 'New name',
-          }),
-        ).context.provide<Pool<dynamic>>(() => pool),
+      firstRequest.provide<Pool<dynamic>>(pool);
+      final first = await login.onRequest(firstRequest.context);
+      final secondRequest = TestRequestContext(
+        path: '/api/v1/auth/login',
+        method: HttpMethod.post,
+        body: jsonEncode({
+          'email': '$userId@example.com',
+          'password': 'password123',
+          'device_id': 'same-device',
+          'device_name': 'New name',
+        }),
       );
+      secondRequest.provide<Pool<dynamic>>(pool);
+      final second = await login.onRequest(secondRequest.context);
       final firstData =
           (await first.json() as Map<String, dynamic>)['data']
               as Map<String, dynamic>;
@@ -314,10 +303,15 @@ void main() {
       );
       final oldAccessCheck =
           await authMiddleware((_) async => Response(body: 'ok'))(
-            TestRequestContext(
-              path: '/api/v1/transactions',
-              headers: {'authorization': 'Bearer ${firstData['access_token']}'},
-            ).context.provide<Pool<dynamic>>(() => pool),
+            _withPool(
+              TestRequestContext(
+                path: '/api/v1/transactions',
+                headers: {
+                  'authorization': 'Bearer ${firstData['access_token']}',
+                },
+              ),
+              pool,
+            ),
           );
       expect(oldAccess?['sid'], isNot(secondData['session_id']));
       expect(oldAccessCheck.statusCode, HttpStatus.unauthorized);
@@ -340,12 +334,24 @@ void main() {
         Sql.named('SELECT expires_at FROM user_sessions WHERE id = @id'),
         parameters: {'id': data['session_id']},
       );
+      final beforeExpiry = before.single[0] as DateTime;
+      final beforeNow = DateTime.now().toUtc();
+      expect(
+        (beforeExpiry.difference(beforeNow) -
+                SessionService.refreshTokenLifetime)
+            .abs()
+            .inSeconds,
+        lessThan(2),
+      );
       final response = await refresh.onRequest(
-        TestRequestContext(
-          path: '/api/v1/auth/refresh',
-          method: HttpMethod.post,
-          body: jsonEncode({'refresh_token': data['refresh_token']}),
-        ).context.provide<Pool<dynamic>>(() => pool),
+        _withPool(
+          TestRequestContext(
+            path: '/api/v1/auth/refresh',
+            method: HttpMethod.post,
+            body: jsonEncode({'refresh_token': data['refresh_token']}),
+          ),
+          pool,
+        ),
       );
       final refreshed =
           (await response.json() as Map<String, dynamic>)['data']
@@ -354,12 +360,16 @@ void main() {
         Sql.named('SELECT expires_at FROM user_sessions WHERE id = @id'),
         parameters: {'id': data['session_id']},
       );
+      final afterExpiry = after.single[0] as DateTime;
+      final afterNow = DateTime.now().toUtc();
 
       expect(response.statusCode, HttpStatus.ok);
       expect(refreshed['refresh_token'], isNot(data['refresh_token']));
       expect(
-        after.single[0] as DateTime,
-        greaterThan(before.single[0] as DateTime),
+        (afterExpiry.difference(afterNow) - SessionService.refreshTokenLifetime)
+            .abs()
+            .inSeconds,
+        lessThan(2),
       );
       expect(
         await SessionService(
@@ -390,43 +400,41 @@ void main() {
         final otherData =
             (await other.json() as Map<String, dynamic>)['data']
                 as Map<String, dynamic>;
-        final handler = logout_middleware.middleware(logout.onRequest);
-        final request = (String token) => TestRequestContext(
-          path: '/api/v1/auth/logout',
-          method: HttpMethod.post,
-          headers: {'authorization': 'Bearer $token'},
-        ).context.provide<Pool<dynamic>>(() => pool);
-
-        expect(
-          (await handler(
-            request(ownerData['access_token'] as String),
-          )).statusCode,
-          HttpStatus.ok,
+        final crossRequest = TestRequestContext(
+          path: '/api/v1/auth/sessions/${ownerData['session_id']}',
+          method: HttpMethod.delete,
         );
-        expect(
-          (await handler(
-            request(ownerData['access_token'] as String),
-          )).statusCode,
-          HttpStatus.ok,
+        crossRequest.provide<Pool<dynamic>>(pool);
+        crossRequest.provide<String>(otherId);
+        final cross = await session_id.onRequest(
+          crossRequest.context,
+          ownerData['session_id'] as String,
         );
-        final cross =
-            await sessions_middleware.middleware(
-              (context) => session_id.onRequest(
-                context,
-                ownerData['session_id'] as String,
-              ),
-            )(
-              TestRequestContext(
-                path: '/api/v1/auth/sessions/${ownerData['session_id']}',
-                method: HttpMethod.delete,
-                headers: {
-                  'authorization': 'Bearer ${otherData['access_token']}',
-                },
-              ).context.provide<Pool<dynamic>>(() => pool),
-            );
 
         expect(cross.statusCode, HttpStatus.ok);
         expect(otherData['session_id'], isNot(ownerData['session_id']));
+        final target = await pool.execute(
+          Sql.named('SELECT revoked_at FROM user_sessions WHERE id = @id'),
+          parameters: {'id': ownerData['session_id']},
+        );
+        expect(target.single[0], isNull);
+
+        final logoutRequest = TestRequestContext(
+          path: '/api/v1/auth/logout',
+          method: HttpMethod.post,
+        );
+        logoutRequest.provide<Pool<dynamic>>(pool);
+        logoutRequest.provide<AuthSession>(
+          AuthSession(ownerId, ownerData['session_id'] as String),
+        );
+        expect(
+          (await logout.onRequest(logoutRequest.context)).statusCode,
+          HttpStatus.ok,
+        );
+        expect(
+          (await logout.onRequest(logoutRequest.context)).statusCode,
+          HttpStatus.ok,
+        );
       } finally {
         await _deleteUser(pool, ownerId);
         await _deleteUser(pool, otherId);
@@ -445,15 +453,23 @@ void main() {
       final data =
           (await loggedIn.json() as Map<String, dynamic>)['data']
               as Map<String, dynamic>;
-      final handler = logout_all_middleware.middleware(logout_all.onRequest);
       final request = TestRequestContext(
         path: '/api/v1/auth/logout-all',
         method: HttpMethod.post,
-        headers: {'authorization': 'Bearer ${data['access_token']}'},
-      ).context.provide<Pool<dynamic>>(() => pool);
+      );
+      request.provide<Pool<dynamic>>(pool);
+      request.provide<AuthSession>(
+        AuthSession(userId, data['session_id'] as String),
+      );
 
-      expect((await handler(request)).statusCode, HttpStatus.ok);
-      expect((await handler(request)).statusCode, HttpStatus.ok);
+      expect(
+        (await logout_all.onRequest(request.context)).statusCode,
+        HttpStatus.ok,
+      );
+      expect(
+        (await logout_all.onRequest(request.context)).statusCode,
+        HttpStatus.ok,
+      );
     } finally {
       await _deleteUser(pool, userId);
       await pool.close();
@@ -461,16 +477,23 @@ void main() {
   }, skip: _skipDbTest);
 }
 
-RequestContext _loginRequest(String userId, Pool<dynamic> pool) =>
-    TestRequestContext(
-      path: '/api/v1/auth/login',
-      method: HttpMethod.post,
-      body: jsonEncode({
-        'email': '$userId@example.com',
-        'password': 'password123',
-        'device_id': userId,
-      }),
-    ).context.provide<Pool<dynamic>>(() => pool);
+RequestContext _loginRequest(String userId, Pool<dynamic> pool) => _withPool(
+  TestRequestContext(
+    path: '/api/v1/auth/login',
+    method: HttpMethod.post,
+    body: jsonEncode({
+      'email': '$userId@example.com',
+      'password': 'password123',
+      'device_id': userId,
+    }),
+  ),
+  pool,
+);
+
+RequestContext _withPool(TestRequestContext request, Pool<dynamic> pool) {
+  request.provide<Pool<dynamic>>(pool);
+  return request.context;
+}
 
 Pool<dynamic> _pool() {
   final url = Uri.parse(Platform.environment['DATABASE_URL']!);

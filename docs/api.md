@@ -74,6 +74,19 @@ Response `200`:
 
 ## Auth API
 
+### Session and token policy
+
+- Access JWTs expire after 15 minutes and include session ownership binding.
+- Refresh tokens expire 30 days after issuance. Each successful refresh rotates
+  the token and resets session expiry to exactly 30 days from refresh time
+  (sliding expiry).
+- Reusing any consumed refresh token is intentional token-theft protection: the
+  entire owning session is revoked, and the request returns `401`.
+- `POST /api/v1/auth/logout` and `POST /api/v1/auth/logout-all` accept repeated
+  requests with structurally valid, signed tokens. Expired access tokens remain
+  rejected, preserving authentication safety; clients must retry before access
+  token expiry or use a fresh authenticated token.
+
 ### `POST /api/v1/auth/register`
 
 Request:
