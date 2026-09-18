@@ -1,0 +1,186 @@
+class ComparisonPeriod {
+  const ComparisonPeriod(this.start, this.end);
+
+  final DateTime start;
+  final DateTime end;
+}
+
+class ComparisonTransaction {
+  const ComparisonTransaction({
+    required this.categoryId,
+    required this.categoryName,
+    required this.type,
+    required this.amount,
+  });
+
+  final String categoryId;
+  final String categoryName;
+  final String type;
+  final num amount;
+}
+
+class PeriodTotals {
+  const PeriodTotals({
+    required this.income,
+    required this.expense,
+    required this.categories,
+  });
+
+  final num? income;
+  final num? expense;
+  final Map<String, CategoryTotal> categories;
+}
+
+class CategoryTotal {
+  const CategoryTotal({required this.name, required this.value});
+
+  final String name;
+  final num value;
+}
+
+class ComparisonResult {
+  const ComparisonResult({
+    required this.income,
+    required this.expense,
+    required this.netCashFlow,
+    required this.categories,
+    required this.drivers,
+  });
+
+  final Map<String, dynamic> income;
+  final Map<String, dynamic> expense;
+  final Map<String, dynamic> netCashFlow;
+  final Map<String, Map<String, dynamic>> categories;
+  final List<Map<String, dynamic>> drivers;
+}
+
+ComparisonPeriod deriveComparisonPeriod({
+  required DateTime start,
+  required DateTime end,
+}) {
+  final days = end.difference(start).inDays;
+  final previousYear = start.month == 1 ? start.year - 1 : start.year;
+  final previousMonth = start.month == 1 ? 12 : start.month - 1;
+  final previousMonthDays = DateTime.utc(start.year, start.month, 0).day;
+  final previousStart = DateTime.utc(
+    previousYear,
+    previousMonth,
+    start.day.clamp(1, previousMonthDays),
+  );
+  final previousMonthEnd = DateTime.utc(start.year, start.month);
+  final previousEnd = start.day == 1 && end.day == 1
+      ? previousMonthEnd
+      : DateTime.utc(
+          previousStart.year,
+          previousStart.month,
+          (previousStart.day + days).clamp(1, previousMonthDays),
+        );
+  return ComparisonPeriod(previousStart, previousEnd);
+}
+
+Map<String, dynamic> compareValue({
+  required num? current,
+  required num? previous,
+}) {
+  final result = <String, dynamic>{};
+  if (current != null) result['value'] = current;
+  if (current == null || previous == null) {
+    result['absolute_change'] = null;
+    return result;
+  }
+  final change = current - previous;
+  result['absolute_change'] = change;
+  if (previous != 0) result['percentage_change'] = change / previous * 100;
+  return result;
+}
+
+PeriodTotals aggregatePeriod(Iterable<ComparisonTransaction> transactions) {
+  num? income;
+  num? expense;
+  final categories = <String, CategoryTotal>{};
+  for (final transaction in transactions) {
+    if (transaction.type == 'income') {
+      income = (income ?? 0) + transaction.amount;
+    } else {
+      expense = (expense ?? 0) + transaction.amount;
+    }
+    final category = categories[transaction.categoryId];
+    categories[transaction.categoryId] = CategoryTotal(
+      name: transaction.categoryName,
+      value: (category?.value ?? 0) + transaction.amount,
+    );
+  }
+  return PeriodTotals(income: income, expense: expense, categories: categories);
+}
+
+ComparisonResult buildComparison({
+  required PeriodTotals current,
+  required PeriodTotals previous,
+}) {
+  final categories = <String, Map<String, dynamic>>{};
+  final ids = {...current.categories.keys, ...previous.categories.keys};
+  for (final id in ids) {
+    final currentCategory = current.categories[id];
+    final previousCategory = previous.categories[id];
+    categories[id] = {
+      'category_id': id,
+      'name': currentCategory?.name ?? previousCategory!.name,
+      ...compareValue(
+        current: currentCategory?.value,
+        previous: previousCategory?.value,
+      ),
+    };
+  }
+
+  final drivers =
+      ids
+          .map((id) {
+            final item = categories[id]!;
+            final currentValue = current.categories[id]?.value;
+            final previousValue = previous.categories[id]?.value;
+            final change = currentValue == null && previousValue != null
+                ? -previousValue
+                : currentValue != null && previousValue == null
+                ? currentValue
+                : (item['absolute_change'] as num?);
+            return {
+              ...item,
+              'absolute_change': change,
+              '_magnitude': change?.abs() ?? -1,
+            };
+          })
+          .where((item) => item['_magnitude'] >= 0)
+          .toList()
+        ..sort((a, b) {
+          final magnitude = (b['_magnitude'] as num).compareTo(
+            a['_magnitude'] as num,
+          );
+          return magnitude == 0
+              ? (a['category_id'] as String).compareTo(
+                  b['category_id'] as String,
+                )
+              : magnitude;
+        });
+  for (final driver in drivers) {
+    driver.remove('_magnitude');
+  }
+
+  final netCurrent = current.income != null && current.expense != null
+      ? current.income! - current.expense!
+      : null;
+  final netPrevious = previous.income != null && previous.expense != null
+      ? previous.income! - previous.expense!
+      : null;
+  return ComparisonResult(
+    income: compareValue(current: current.income, previous: previous.income),
+    expense: compareValue(current: current.expense, previous: previous.expense),
+    netCashFlow: {
+      'available': netCurrent != null && netPrevious != null,
+      if (netCurrent != null && netPrevious != null)
+        ...compareValue(current: netCurrent, previous: netPrevious),
+      if (netCurrent == null || netPrevious == null) 'value': null,
+    },
+    categories: categories,
+    drivers: drivers.take(3).toList(),
+  );
+}
