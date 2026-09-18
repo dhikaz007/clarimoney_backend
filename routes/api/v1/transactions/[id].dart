@@ -108,13 +108,32 @@ FutureOr<Response> onRequest(RequestContext context, String id) async {
       );
     }
 
+    final existing = await pool.execute(
+      Sql.named('''
+        SELECT type FROM transactions
+        WHERE id = @id AND user_id = @userId
+      '''),
+      parameters: {'id': id, 'userId': userId},
+    );
+    if (existing.isEmpty) {
+      return apiResponse(
+        statusCode: HttpStatus.notFound,
+        message: 'Transaction not found',
+      );
+    }
+    final effectiveType = type ?? existing.single[0] as String;
+
     final category = await pool.execute(
       Sql.named('''
          SELECT id FROM categories
          WHERE id = @categoryId AND (user_id = @userId OR user_id IS NULL)
-           AND (@type IS NULL OR type = @type) AND status = 'active'
+           AND type = @type AND status = 'active'
       '''),
-      parameters: {'categoryId': categoryId, 'userId': userId, 'type': type},
+      parameters: {
+        'categoryId': categoryId,
+        'userId': userId,
+        'type': effectiveType,
+      },
     );
     if (category.isEmpty) {
       return apiResponse(
@@ -126,14 +145,14 @@ FutureOr<Response> onRequest(RequestContext context, String id) async {
     final result = await pool.execute(
       Sql.named('''
         UPDATE transactions
-         SET type = COALESCE(@type, type), category_id = @categoryId, amount = @amount, date = @date, note = @note
+         SET type = @type, category_id = @categoryId, amount = @amount, date = @date, note = @note
         WHERE id = @id AND user_id = @userId
       '''),
       parameters: {
         'id': id,
         'userId': userId,
         'categoryId': categoryId,
-        'type': type,
+        'type': effectiveType,
         'amount': amount,
         'date': date.toUtc(),
         'note': _note(body['note']),

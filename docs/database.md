@@ -74,7 +74,7 @@ Constraints:
 
 - Primary key: `transactions_pkey` pada `id`.
 - Foreign key: `user_id` → `users.id`, delete cascade.
-- Foreign key: `category_id` → `categories.id`, delete set null.
+- Foreign key: `category_id` → `categories.id`; category hard delete is unsupported.
 - Check: `amount > 0`.
 - Check: category type matches transaction type; archived categories cannot receive new assignments.
 - `category_id` is required for every transaction after migration 010.
@@ -108,7 +108,7 @@ categories 1 ──── * transactions
 Delete behavior:
 
 - Hapus user → categories dan transactions milik user ikut terhapus.
-- Hapus category → `transactions.category_id` menjadi `NULL`.
+- Archive category instead of deleting it; historical transactions retain category references.
 
 ## Migration
 

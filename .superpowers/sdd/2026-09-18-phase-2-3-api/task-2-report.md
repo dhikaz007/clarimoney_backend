@@ -46,7 +46,7 @@ Implemented unified transaction and category APIs.
 
 ## Review verification
 
-- `JWT_SECRET='<test secret>' dart test`: passed, 51 passed, 44 existing DB-dependent tests skipped because no `DATABASE_URL` was exposed.
+- `JWT_SECRET='task2-review-test-secret-012345678901234567890' dart test`: passed, 51 passed, 44 existing DB-dependent tests skipped because no `DATABASE_URL` was exposed.
 - `dart analyze`: passed with existing info-level lint notices.
 - `dart_frog build`: passed.
 - `scripts/phase2_migration_test.sh`: passed.
@@ -57,3 +57,9 @@ Implemented unified transaction and category APIs.
 - Neon credential was not available for destructive/live migration execution.
 - Requested Neon zero-skip run remains unverified; requires `DATABASE_URL` in execution environment.
 - Existing suite has no transaction fixture coverage for income/expense CRUD, ownership, archive, filter ordering; focused malformed-payload and shared validation tests added without inventing a second DB harness.
+
+## Re-review fixes
+
+- Update loads existing transaction type before category validation.
+- Omitted update type uses stored type; explicit mismatch returns 400.
+- Database docs now match non-null category references and archive-only lifecycle.
