@@ -1,0 +1,40 @@
+info:
+  name: Delete Account
+  type: http
+  seq: 8
+
+http:
+  method: DELETE
+  url: "{{base_url}}/api/v1/auth/account"
+  auth:
+    type: bearer
+    token: "{{access_token}}"
+  body:
+    type: json
+    data: |
+      {
+        "password": "password123"
+      }
+
+tests: |
+  test("Account deletion succeeds", () => {
+    expect(res.status).to.equal(200);
+  });
+  test("Confirms deletion without credentials", () => {
+    expect(res.body.message).to.equal("Account deleted successfully");
+    expect(JSON.stringify(res.body)).to.not.include("password");
+  });
+
+examples:
+  - name: Success
+    status: 200
+    body: |
+      {"status_code": 200, "message": "Account deleted successfully", "data": null}
+  - name: Wrong or missing password
+    status: 401
+    body: |
+      {"status_code": 401, "message": "Invalid password", "data": null}
+  - name: Missing access token
+    status: 401
+    body: |
+      {"status_code": 401, "message": "Missing or invalid token", "data": null}

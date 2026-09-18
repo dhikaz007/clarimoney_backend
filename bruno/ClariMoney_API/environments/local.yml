@@ -31,3 +31,12 @@ variables:
     value: ""
   - name: transaction_id
     value: ""
+  - name: verification_token
+    value: ""
+    description: Paste one-time token from verification email locally; never commit it.
+  - name: reset_token
+    value: ""
+    description: Paste one-time token from reset email locally; never commit it.
+  - name: email_verified
+    value: "false"
+    description: Updated by the Me request response script.
