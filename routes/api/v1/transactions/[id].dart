@@ -7,6 +7,12 @@ import 'package:clarimoney_backend/src/transaction_validation.dart';
 
 FutureOr<Response> onRequest(RequestContext context, String id) async {
   final method = context.request.method;
+  if (!validUuid(id)) {
+    return apiResponse(
+      statusCode: HttpStatus.badRequest,
+      message: 'Invalid transaction id',
+    );
+  }
 
   if (method == HttpMethod.delete) {
     final userId = context.read<String>();
@@ -174,7 +180,13 @@ FutureOr<Response> onRequest(RequestContext context, String id) async {
       statusCode: HttpStatus.badRequest,
       message: 'Invalid request body',
     );
-  } on ServerException {
+  } on ServerException catch (e) {
+    if (e.code == '23514' || e.code == '23503') {
+      return apiResponse(
+        statusCode: HttpStatus.badRequest,
+        message: 'Invalid transaction',
+      );
+    }
     return apiResponse(
       statusCode: HttpStatus.internalServerError,
       message: 'Failed to update transaction',

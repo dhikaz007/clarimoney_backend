@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-: "${DATABASE_URL:?DATABASE_URL is required}"
+: "${RELEASE_VERIFY_DATABASE_URL:?RELEASE_VERIFY_DATABASE_URL is required; production DATABASE_URL is forbidden}"
+: "${ALLOW_RELEASE_DB_MUTATION:?Set ALLOW_RELEASE_DB_MUTATION=true only for disposable release DB}"
+if [[ "$ALLOW_RELEASE_DB_MUTATION" != true ]]; then
+  printf '%s\n' 'Release verification refused: ALLOW_RELEASE_DB_MUTATION=true required for disposable database.' >&2
+  exit 1
+fi
+DATABASE_URL="$RELEASE_VERIFY_DATABASE_URL"
 : "${JWT_SECRET:?JWT_SECRET is required}"
 if [[ "$DATABASE_URL" == *'channel_binding='* ]]; then
   DATABASE_URL="$(python3 - "$DATABASE_URL" <<'PY'

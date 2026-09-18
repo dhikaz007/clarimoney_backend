@@ -28,3 +28,7 @@ DateTime? fullIsoDate(Object? value) {
 
 String escapeLike(String value) =>
     value.replaceAllMapped(RegExp(r'[\\%_]'), (match) => '\\${match.group(0)}');
+
+bool validUuid(String value) => RegExp(
+  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
+).hasMatch(value);

@@ -13,6 +13,22 @@ num? parseComparisonNumeric(Object? value) {
   return number;
 }
 
+Object? _jsonNumeric(Object? value) {
+  if (value == null) return null;
+  final text = value.toString().trim();
+  final normalized = text.replaceFirst(RegExp(r'^(-?)0+(?=\d)'), r'$1');
+  final integer = BigInt.tryParse(normalized);
+  if (integer != null &&
+      integer >= BigInt.from(-9007199254740991) &&
+      integer <= BigInt.from(9007199254740991)) {
+    return integer.toInt();
+  }
+  final number = num.tryParse(normalized);
+  return number != null && number.isFinite && number.toString() == normalized
+      ? number
+      : normalized;
+}
+
 String comparisonIso(DateTime value) =>
     '${value.toUtc().toIso8601String().split('.').first}.000Z';
 
@@ -80,7 +96,36 @@ Future<Map<String, dynamic>> fetchComparison({
         SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd),
         SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd),
         SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd),
-        SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd)
+        SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd),
+        COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd), 0)
+          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd), 0),
+        COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
+          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0),
+        SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd)
+          - SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd),
+        SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd)
+          - SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd),
+        CASE WHEN SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd) = 0
+          THEN NULL ELSE (SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd)
+            - SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd))
+            / SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd) * 100 END,
+        CASE WHEN SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd) = 0
+          THEN NULL ELSE (SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd)
+            - SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd))
+            / SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd) * 100 END
+        ,
+        (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd), 0)
+          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd), 0))
+        - (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
+          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)),
+        CASE WHEN (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
+          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)) = 0 THEN NULL
+          ELSE (((COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd), 0)
+            - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd), 0))
+            - (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
+            - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)))
+            / (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
+            - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)) * 100 END
       FROM transactions t
       WHERE t.user_id = @userId
         AND ((t.date >= @currentStart AND t.date < @currentEnd)
@@ -94,7 +139,13 @@ Future<Map<String, dynamic>> fetchComparison({
     Sql.named('''
       SELECT c.id, c.name,
         SUM(t.amount) FILTER (WHERE t.date >= @currentStart AND t.date < @currentEnd),
-        SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd)
+        SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd),
+        SUM(t.amount) FILTER (WHERE t.date >= @currentStart AND t.date < @currentEnd)
+          - SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd),
+        CASE WHEN SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd) = 0 THEN NULL
+          ELSE (SUM(t.amount) FILTER (WHERE t.date >= @currentStart AND t.date < @currentEnd)
+            - SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd))
+            / SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd) * 100 END
       FROM categories c
       LEFT JOIN transactions t ON t.category_id = c.id
         AND t.user_id = @userId
@@ -104,7 +155,8 @@ Future<Map<String, dynamic>> fetchComparison({
         AND (CAST(@categoryId AS uuid) IS NULL OR c.id = @categoryId)
         ${includeEmptyCategories ? '' : 'AND (t.id IS NOT NULL)'}
       GROUP BY c.id, c.name
-      ORDER BY c.id ASC
+       ORDER BY ABS(COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @currentStart AND t.date < @currentEnd), 0)
+         - COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd), 0)) DESC, c.id ASC
     '''),
     parameters: parameters,
   );
@@ -135,6 +187,36 @@ Future<Map<String, dynamic>> fetchComparison({
       categories: previousCategories,
     ),
   );
+  result.income
+    ..['value'] = _jsonNumeric(total[0])
+    ..['absolute_change'] = _jsonNumeric(total[6])
+    ..['percentage_change'] = _jsonNumeric(total[8]);
+  result.expense
+    ..['value'] = _jsonNumeric(total[2])
+    ..['absolute_change'] = _jsonNumeric(total[7])
+    ..['percentage_change'] = _jsonNumeric(total[9]);
+  result.netCashFlow
+    ..['value'] = _jsonNumeric(total[4])
+    ..['absolute_change'] = _jsonNumeric(total[10])
+    ..['percentage_change'] = _jsonNumeric(total[11]);
+  for (final row in categories) {
+    final item = result.categories[row[0].toString()];
+    if (item == null) continue;
+    item
+      ..['value'] = _jsonNumeric(row[2])
+      ..['absolute_change'] = _jsonNumeric(row[4])
+      ..['percentage_change'] = _jsonNumeric(row[5]);
+  }
+  result.drivers
+    ..clear()
+    ..addAll(
+      categories.take(3).map((row) {
+        final item = result.categories[row[0].toString()]!;
+        return <String, dynamic>{...item};
+      }),
+    );
+  result.netCashFlow['current'] = _jsonNumeric(total[4]);
+  result.netCashFlow['previous'] = _jsonNumeric(total[5]);
   final periods = comparisonPeriods(
     currentStart: currentStart,
     currentEnd: currentEnd,
@@ -155,8 +237,8 @@ Future<Map<String, dynamic>> fetchComparison({
       'periods': periods,
       'category_id': category['category_id'],
       'name': category['name'],
-      'current': currentCategory?.value,
-      'previous': previousCategory?.value,
+      'current': _jsonNumeric(currentCategory?.value),
+      'previous': _jsonNumeric(previousCategory?.value),
       'absolute_change': category['absolute_change'],
       'percentage_change': category['percentage_change'],
     };
@@ -164,41 +246,39 @@ Future<Map<String, dynamic>> fetchComparison({
   return {
     'period': period,
     'periods': periods,
-    'income': _withSides(
-      result.income,
-      parseComparisonNumeric(total[0]),
-      parseComparisonNumeric(total[1]),
-    ),
-    'expense': _withSides(
-      result.expense,
-      parseComparisonNumeric(total[2]),
-      parseComparisonNumeric(total[3]),
-    ),
+    'income': {
+      ...result.income,
+      'current': _jsonNumeric(total[0]),
+      'previous': _jsonNumeric(total[1]),
+    },
+    'expense': {
+      ...result.expense,
+      'current': _jsonNumeric(total[2]),
+      'previous': _jsonNumeric(total[3]),
+    },
     'net_cash_flow': {
       ...result.netCashFlow,
-      'current': _net(
-        parseComparisonNumeric(total[0]),
-        parseComparisonNumeric(total[2]),
-      ),
-      'previous': _net(
-        parseComparisonNumeric(total[1]),
-        parseComparisonNumeric(total[3]),
-      ),
+      'current': _jsonNumeric(total[4]),
+      'previous': _jsonNumeric(total[5]),
     },
     'categories': {
       for (final entry in result.categories.entries)
         entry.key: {
           ...entry.value,
-          'current': currentCategories[entry.key]?.value,
-          'previous': previousCategories[entry.key]?.value,
+          'current': _jsonNumeric(currentCategories[entry.key]?.value),
+          'previous': _jsonNumeric(previousCategories[entry.key]?.value),
         },
     },
     'drivers': result.drivers
         .map(
           (driver) => {
             ...driver,
-            'current': currentCategories[driver['category_id']]?.value,
-            'previous': previousCategories[driver['category_id']]?.value,
+            'current': _jsonNumeric(
+              currentCategories[driver['category_id']]?.value,
+            ),
+            'previous': _jsonNumeric(
+              previousCategories[driver['category_id']]?.value,
+            ),
           },
         )
         .toList(),
