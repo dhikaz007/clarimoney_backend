@@ -236,11 +236,19 @@ void main() {
         headers: {'authorization': 'Bearer $token'},
       );
       request.provide<AuthSession>(AuthSession(userId, sessionId));
+      var calls = 0;
       request.provide<EmailService>(
-        EmailService(environment: const {}, sender: (_, __) async {}),
+        EmailService(
+          environment: const {},
+          sender: (_, __) async {
+            calls++;
+            throw StateError('SMTP must not be called');
+          },
+        ),
       );
       final response = await resend.onRequest(_withPool(request, pool));
       expect(response.statusCode, HttpStatus.ok);
+      expect(calls, 0);
     } finally {
       await _deleteUser(pool, userId);
       await pool.close();
@@ -277,13 +285,15 @@ void main() {
     }
   }, skip: _skipDbTest);
 
-  test('failed resend invalidates issued token', () async {
+  test('sender failure preserves prior active verification token', () async {
     final pool = _pool();
     final userId = const Uuid().v4();
     final sessionId = const Uuid().v4();
     try {
       await _insertUser(pool, userId);
       await _insertSession(pool, userId, sessionId);
+      final raw = AuthTokenUtils.generate();
+      await _insertVerificationToken(pool, userId, raw);
       final request = TestRequestContext(
         path: '/api/v1/auth/resend-verification',
         method: HttpMethod.post,
@@ -297,7 +307,7 @@ void main() {
       );
       final response = await resend.onRequest(_withPool(request, pool));
       expect(response.statusCode, HttpStatus.internalServerError);
-      expect(await _validVerificationTokens(pool, userId), isEmpty);
+      expect(await _activeTokenHashes(pool, userId), contains(AuthTokenUtils.hash(raw)));
     } finally {
       await _deleteUser(pool, userId);
       await pool.close();
@@ -337,13 +347,15 @@ void main() {
     }
   }, skip: _skipDbTest);
 
-  test('invalid SMTP configuration issues no verification token', () async {
+  test('invalid SMTP configuration preserves prior active verification token', () async {
     final pool = _pool();
     final userId = const Uuid().v4();
     final sessionId = const Uuid().v4();
     try {
       await _insertUser(pool, userId);
       await _insertSession(pool, userId, sessionId);
+      final raw = AuthTokenUtils.generate();
+      await _insertVerificationToken(pool, userId, raw);
       final request = TestRequestContext(
         path: '/api/v1/auth/resend-verification',
         method: HttpMethod.post,
@@ -354,7 +366,7 @@ void main() {
       );
       final response = await resend.onRequest(_withPool(request, pool));
       expect(response.statusCode, HttpStatus.internalServerError);
-      expect(await _validVerificationTokens(pool, userId), isEmpty);
+      expect(await _activeTokenHashes(pool, userId), contains(AuthTokenUtils.hash(raw)));
     } finally {
       await _deleteUser(pool, userId);
       await pool.close();
@@ -515,3 +527,25 @@ Future<List<ResultRow>> _validVerificationTokens(
       AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP'''),
   parameters: {'user_id': userId},
 );
+
+Future<void> _insertVerificationToken(Pool<dynamic> pool, String userId, String raw) =>
+    pool.execute(
+      Sql.named('''INSERT INTO auth_tokens
+        (id, user_id, token_hash, purpose, expires_at)
+        VALUES (@id, @user_id, @hash, 'email_verification', CURRENT_TIMESTAMP + INTERVAL '1 day')'''),
+      parameters: {
+        'id': const Uuid().v4(),
+        'user_id': userId,
+        'hash': AuthTokenUtils.hash(raw),
+      },
+    );
+
+Future<List<String>> _activeTokenHashes(Pool<dynamic> pool, String userId) async {
+  final rows = await pool.execute(
+    Sql.named('''SELECT token_hash FROM auth_tokens
+      WHERE user_id = @user_id AND purpose = 'email_verification'
+        AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP'''),
+    parameters: {'user_id': userId},
+  );
+  return [for (final row in rows) row[0] as String];
+}
