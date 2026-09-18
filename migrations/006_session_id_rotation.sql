@@ -1,3 +1,8 @@
+BEGIN;
+
+-- Same-device login replaces user_sessions.id. Keep history rows attached to
+-- replacement sessions when that UUID changes. Safe to rerun: named
+-- constraints are removed before being recreated with required actions.
 ALTER TABLE user_sessions
   DROP CONSTRAINT IF EXISTS user_sessions_user_id_fkey;
 
@@ -13,3 +18,5 @@ ALTER TABLE refresh_token_history
   ADD CONSTRAINT refresh_token_history_session_id_fkey
   FOREIGN KEY (session_id) REFERENCES user_sessions(id)
   ON DELETE CASCADE ON UPDATE CASCADE;
+
+COMMIT;

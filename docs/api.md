@@ -77,6 +77,8 @@ Response `200`:
 ### Session and token policy
 
 - Access JWTs expire after 15 minutes and include session ownership binding.
+- Access JWTs issued before session rollout lack `sid` and are invalid after
+  deployment. Clients must sign in again.
 - Refresh tokens expire 30 days after issuance. Each successful refresh rotates
   the token and resets session expiry to exactly 30 days from refresh time
   (sliding expiry).
@@ -124,6 +126,9 @@ Validation:
 - Email valid.
 - Password minimum 8 characters.
 - `device_id` required, non-empty, maximum 255 characters.
+- Validation counts Dart UTF-16 code units; Unicode supplementary characters
+  count as two units. Database `VARCHAR(255)` uses character semantics, so
+  clients should keep device IDs within 255 UTF-16 code units.
 - `device_name` optional.
 - Email duplicate returns `409`.
 - Missing or invalid `device_id` returns `400`:

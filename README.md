@@ -41,6 +41,17 @@ Production requirements:
 - Rotate any Neon credential exposed outside secret storage.
 - Set `DATABASE_URL`, `JWT_SECRET`, and `ALLOWED_ORIGIN` in deployment secrets.
 - Never commit `.env`.
+- Access JWTs issued before this rollout lack required `sid` session binding and
+  are invalid after deployment. Clients must sign in again.
+
+Test policy:
+- Run `JWT_SECRET="${JWT_SECRET:?export JWT_SECRET}" DATABASE_URL="${DATABASE_URL:?export DATABASE_URL}" dart test` for full Neon-backed verification. Load `.env` with a dotenv tool first; `.env` URLs may contain shell metacharacters.
+- DB tests may skip only when `DATABASE_URL` or `JWT_SECRET` is absent in local development; release and CI runs must provide both and must not accept skipped DB tests.
+- Migration 006 must run after 004 and 005. It replaces the history foreign key
+  so same-device session UUID replacement cascades to `refresh_token_history`.
+- Migrations assume clean ordered application. Existing objects are not repaired
+  beyond explicit `IF NOT EXISTS`/named-constraint handling; inspect schema before
+  applying to partially migrated databases.
 
 ## Render Free deployment
 
