@@ -24,6 +24,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
       pool: context.read<Pool<dynamic>>(),
       userId: context.read<String>(),
       period: period,
+      includeEmptyCategories: true,
     );
     final categories = (data['categories'] as Map<String, dynamic>).values
         .map((value) => value as Map<String, dynamic>)

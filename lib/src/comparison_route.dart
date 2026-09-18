@@ -4,6 +4,15 @@ import 'package:postgres/postgres.dart';
 num? _net(num? income, num? expense) =>
     income == null || expense == null ? null : income - expense;
 
+num? parseComparisonNumeric(Object? value) {
+  if (value == null) return null;
+  final number = value is num ? value : num.tryParse(value.toString().trim());
+  if (number == null || !number.isFinite) {
+    throw FormatException('invalid PostgreSQL numeric aggregate');
+  }
+  return number;
+}
+
 String comparisonIso(DateTime value) =>
     '${value.toUtc().toIso8601String().split('.').first}.000Z';
 
@@ -33,6 +42,7 @@ Future<Map<String, dynamic>> fetchComparison({
   required String userId,
   required String period,
   String? categoryId,
+  bool includeEmptyCategories = false,
 }) async {
   final now = DateTime.now().toUtc();
   final currentStart = period == 'previous_month'
@@ -92,6 +102,7 @@ Future<Map<String, dynamic>> fetchComparison({
           OR (t.date >= @previousStart AND t.date < @previousEnd))
       WHERE (c.user_id = @userId OR c.user_id IS NULL)
         AND (@categoryId IS NULL OR c.id = @categoryId)
+        ${includeEmptyCategories ? '' : 'AND (t.id IS NOT NULL)'}
       GROUP BY c.id, c.name
       ORDER BY c.id ASC
     '''),
@@ -103,18 +114,24 @@ Future<Map<String, dynamic>> fetchComparison({
   for (final row in categories) {
     final id = row[0].toString();
     final name = row[1] as String;
-    currentCategories[id] = CategoryTotal(name: name, value: row[2] as num?);
-    previousCategories[id] = CategoryTotal(name: name, value: row[3] as num?);
+    currentCategories[id] = CategoryTotal(
+      name: name,
+      value: parseComparisonNumeric(row[2]),
+    );
+    previousCategories[id] = CategoryTotal(
+      name: name,
+      value: parseComparisonNumeric(row[3]),
+    );
   }
   final result = buildComparison(
     current: PeriodTotals(
-      income: total[0] as num?,
-      expense: total[2] as num?,
+      income: parseComparisonNumeric(total[0]),
+      expense: parseComparisonNumeric(total[2]),
       categories: currentCategories,
     ),
     previous: PeriodTotals(
-      income: total[1] as num?,
-      expense: total[3] as num?,
+      income: parseComparisonNumeric(total[1]),
+      expense: parseComparisonNumeric(total[3]),
       categories: previousCategories,
     ),
   );
@@ -147,12 +164,26 @@ Future<Map<String, dynamic>> fetchComparison({
   return {
     'period': period,
     'periods': periods,
-    'income': _withSides(result.income, total[0] as num?, total[1] as num?),
-    'expense': _withSides(result.expense, total[2] as num?, total[3] as num?),
+    'income': _withSides(
+      result.income,
+      parseComparisonNumeric(total[0]),
+      parseComparisonNumeric(total[1]),
+    ),
+    'expense': _withSides(
+      result.expense,
+      parseComparisonNumeric(total[2]),
+      parseComparisonNumeric(total[3]),
+    ),
     'net_cash_flow': {
       ...result.netCashFlow,
-      'current': _net(total[0] as num?, total[2] as num?),
-      'previous': _net(total[1] as num?, total[3] as num?),
+      'current': _net(
+        parseComparisonNumeric(total[0]),
+        parseComparisonNumeric(total[2]),
+      ),
+      'previous': _net(
+        parseComparisonNumeric(total[1]),
+        parseComparisonNumeric(total[3]),
+      ),
     },
     'categories': {
       for (final entry in result.categories.entries)

@@ -1,8 +1,14 @@
 import 'package:test/test.dart';
 
 import 'package:clarimoney_backend/src/comparison_calculation.dart';
+import 'package:clarimoney_backend/src/comparison_route.dart';
 
 void main() {
+  test('parses PostgreSQL numeric aggregates safely', () {
+    expect(parseComparisonNumeric('12.50'), 12.50);
+    expect(parseComparisonNumeric(null), isNull);
+    expect(() => parseComparisonNumeric('NaN'), throwsFormatException);
+  });
   test('derives previous full month', () {
     final period = deriveComparisonPeriod(
       start: DateTime.utc(2026, 9, 1),

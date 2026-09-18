@@ -179,6 +179,12 @@ keys are `period`, `periods`, `category_id`, `name`, `current`, `previous`,
 `absolute_change`, and `percentage_change`. Missing values remain `null`;
 numeric zero remains `0`.
 
+Category-list and category-detail responses include owned/system categories
+with no period activity using `current: null`, `previous: null`, and null
+change fields. Overview `categories` excludes categories with no activity in
+both periods. Fresh databases must use ordered files in `migrations/`; legacy
+`init_schema.sql` is deprecated and fails safely.
+
 ## Health check
 
 ### `GET /`

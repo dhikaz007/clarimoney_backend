@@ -92,11 +92,12 @@ Register and login are public. Categories, transactions, and summary require `Au
 
 ## Database
 
-Run migrations in order:
+Run migrations in order. Do not run deprecated `init_schema.sql`:
 
 ```sh
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_initial_schema.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/002_mvp_constraints.sql
+for migration in migrations/*.sql; do
+  psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$migration" || exit 1
+done
 ```
 
 Tables: `users`, `categories`, `transactions`.

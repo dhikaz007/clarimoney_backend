@@ -57,9 +57,12 @@ void main() {
         final categories = await fixture.call(categories_route.onRequest);
         expect(
           (categories['data'] as Map<String, dynamic>)['categories'],
-          containsPair(
-            fixture.categoryId,
-            containsPair('category_id', fixture.categoryId),
+          contains(
+            isA<Map<String, dynamic>>().having(
+              (value) => value['category_id'],
+              'category_id',
+              fixture.categoryId,
+            ),
           ),
         );
 

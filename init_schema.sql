@@ -1,4 +1,11 @@
--- init_clarimoney_schema.sql
+-- DEPRECATED: use migrations/001_initial_schema.sql through
+-- migrations/010_phase2_unified_transactions_review_fixes.sql.
+-- This legacy snapshot intentionally fails so fresh setup cannot create an
+-- incompatible pre-Phase-2 schema.
+DO $$ BEGIN
+  RAISE EXCEPTION 'init_schema.sql is deprecated; run migrations/*.sql in order';
+END $$;
+/*
 CREATE TABLE users (
   id UUID PRIMARY KEY,
   email VARCHAR(255) UNIQUE NOT NULL,
@@ -33,3 +40,4 @@ CREATE INDEX IF NOT EXISTS idx_categories_user
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_categories_owner_name_type
   ON categories (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), lower(name), type);
+*/

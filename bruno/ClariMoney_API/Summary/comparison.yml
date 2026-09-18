@@ -1,16 +1,22 @@
-meta:
+info:
   name: comparison
   type: http
   seq: 2
   tags:
-request:
+http:
   method: GET
   url: '{{base_url}}/api/v1/summary/comparison?period=this_month'
-  headers:
-    - name: Authorization
-      value: 'Bearer {{access_token}}'
-      disabled: false
-  body:
-    type: json
-    data: {}
-tests: []
+  auth:
+    type: bearer
+    token: "{{token}}"
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Status is 200", () => expect(res.status).to.equal(200));
+        test("Has stable comparison shape", () => {
+          expect(res.body.data).to.have.property("periods");
+          expect(res.body.data.income).to.have.property("current");
+          expect(res.body.data.income).to.have.property("previous");
+          expect(res.body.data).to.have.property("drivers");
+        });

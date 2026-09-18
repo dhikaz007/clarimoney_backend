@@ -1,16 +1,21 @@
-meta:
+info:
   name: category-comparison
   type: http
   seq: 4
   tags:
-request:
+http:
   method: GET
   url: '{{base_url}}/api/v1/categories/{{category_id}}/comparison?period=this_month'
-  headers:
-    - name: Authorization
-      value: 'Bearer {{access_token}}'
-      disabled: false
-  body:
-    type: json
-    data: {}
-tests: []
+  auth:
+    type: bearer
+    token: "{{token}}"
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Status is 200", () => expect(res.status).to.equal(200));
+        test("Has category detail schema", () => {
+          expect(res.body.data).to.have.property("category_id");
+          expect(res.body.data).to.have.property("current");
+          expect(res.body.data).to.have.property("previous");
+        });

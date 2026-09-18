@@ -25,6 +25,7 @@ FutureOr<Response> onRequest(RequestContext context, String id) async {
       userId: context.read<String>(),
       period: period,
       categoryId: id,
+      includeEmptyCategories: true,
     );
     return apiResponse(
       statusCode: HttpStatus.ok,
