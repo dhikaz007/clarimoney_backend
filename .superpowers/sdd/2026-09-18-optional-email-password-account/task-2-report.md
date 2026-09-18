@@ -17,8 +17,8 @@ Implemented:
 
 Verification:
 
-- `dart test` with repository `.env`: passed 57 tests.
-- `dart test test/routes/email_verification_routes_test.dart` with repository `.env`: passed 6 tests.
+- `dart test` with repository `.env`: passed 63 tests.
+- `dart test test/routes/email_verification_routes_test.dart` with repository `.env`: passed 12 tests.
 - `dart analyze`: passed; existing info diagnostics only.
 - `dart_frog build`: passed.
 - `git diff --check`: passed.
@@ -37,7 +37,10 @@ Review follow-up:
 - Added login-before-verification, successful resend, SMTP failure, concurrent resend, invalid token, and middleware ownership tests.
 - Expanded API docs for profile, resend, verify, SMTP requirements, and failure behavior.
 
-Commit: pending.
+Commits:
+
+- `a72b612 feat: add optional email verification routes`
+- `96cb6e1 fix: close email verification review findings`
 
 Concerns:
 
