@@ -28,11 +28,6 @@ runtime:
           bru.setEnvVar("refresh_token", data.refresh_token);
           bru.setEnvVar("session_id", data.session_id);
           bru.setEnvVar("user_id", data.user.id);
-          console.log("Token", data.token);
-          console.log("Access Token", data.access_token);
-          console.log("Refresh Token", data.refresh_token);
-          console.log("Session Id", data.session_id);
-          console.log("User Id", data.user.id);
         }
 
 settings:

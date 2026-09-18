@@ -3,24 +3,21 @@ variables:
   - name: base_url
     value: http://localhost:8080
     description: Local development server
-  - name: token
-    value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYWY5MDI5MC0xYTMwLTQzYTUtODMyOC04YmJjY2FiOTJhNzQiLCJ2ZXIiOjIsImlhdCI6MTc4OTY2MzkzNiwiZXhwIjoxNzkwMjY4NzM2fQ.5L--FQU-x3S6saqT5r74lE8LU4OlGY9jGKP7E-gaAiA
-  - name: access_token
-    value: ""
-  - name: refresh_token
-    value: ""
   - name: previous_refresh_token
     value: ""
-  - name: session_id
-    value: ""
+    description: Captured after refresh; paste locally only when testing token rotation.
   - name: access_token_2
     value: ""
+    description: Captured by second-device login; paste locally only when testing sessions.
   - name: refresh_token_2
     value: ""
+    description: Captured by second-device login; paste locally only when testing sessions.
   - name: session_id_2
     value: ""
+    description: Captured by second-device login; paste locally only when testing sessions.
   - name: revoked_access_token
     value: ""
+    description: Captured locally for revoked-token checks; never commit a token.
   - name: device_id
     value: bruno-local-device
   - name: device_name
@@ -31,6 +28,18 @@ variables:
     value: ""
   - name: transaction_id
     value: ""
+  - name: token
+    value: ""
+    description: Paste access token locally after login; never commit tokens.
+  - name: refresh_token
+    value: ""
+    description: Paste refresh token locally after login; never commit tokens.
+  - name: session_id
+    value: ""
+    description: Captured session ID; paste locally only when testing sessions.
+  - name: access_token
+    value: ""
+    description: Paste access token locally after login; never commit tokens.
   - name: verification_token
     value: ""
     description: Paste one-time token from verification email locally; never commit it.

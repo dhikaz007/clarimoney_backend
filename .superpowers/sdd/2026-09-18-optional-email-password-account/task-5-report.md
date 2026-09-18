@@ -24,12 +24,12 @@ Status: complete.
 
 ## Commit
 
-Pending task-only commit after final staged-file review.
+- Initial Task 5 commit: `4ae3b36`.
+- Review-fix commit: recorded after final validation and commit.
 
 ## Concerns
 
-- Existing local Bruno environment already contains pre-existing token values;
-  untouched to preserve unrelated local edits. `.env` remains ignored and
-  unstaged.
+- Local Bruno token and session values are empty placeholders. `.env` remains
+  ignored and unstaged.
 - Bruno email-token requests require manual local paste from mail delivery;
   committed environment stores empty placeholders only.
