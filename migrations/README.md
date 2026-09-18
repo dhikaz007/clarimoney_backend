@@ -27,7 +27,7 @@ Bruno environments, logs, and error responses:
 
 - `DATABASE_URL` — Neon PostgreSQL connection string.
 - `JWT_SECRET` — access-token signing secret.
-- `APP_BASE_URL` — public API base URL used in email links.
+- `APP_BASE_URL` — frontend base URL serving `/verify-email` and `/reset-password`; not API base unless frontend routes live there.
 - `SMTP_HOST` — Gmail SMTP host, normally `smtp.gmail.com`.
 - `SMTP_PORT` — SMTP port, normally `587`.
 - `SMTP_USERNAME` — Gmail account address.

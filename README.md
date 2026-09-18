@@ -13,7 +13,7 @@ cp .env.example .env
 export DATABASE_URL='postgresql://...'
 export JWT_SECRET='at-least-32-random-characters'
 export ALLOWED_ORIGIN='http://localhost:3000'
-export APP_BASE_URL='http://localhost:3000'
+export APP_BASE_URL='http://localhost:3000' # Frontend base URL for verification/reset links
 # Optional email features: configure all SMTP values before sending mail.
 export SMTP_HOST='smtp.gmail.com'
 export SMTP_PORT='587'

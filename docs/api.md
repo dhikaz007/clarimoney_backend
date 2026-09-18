@@ -274,8 +274,11 @@ Missing or failed SMTP configuration returns `500`:
 }
 ```
 
-Token issuance commits before delivery. Failed delivery invalidates newly
-issued token, leaving no valid verification token until next resend.
+Token issuance and delivery run within one database transaction. SMTP failure
+rolls back token invalidation and issuance, leaving no valid verification token
+until next resend. SMTP cannot participate in database commit: if mail delivery
+succeeds but database commit later fails, delivered link may be unusable; resend
+then issues a replacement.
 
 ### `POST /api/v1/auth/verify-email`
 
@@ -306,7 +309,9 @@ Invalid, expired, or reused token returns generic `400`:
 ```
 
 SMTP configuration uses `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
-`SMTP_PASSWORD`, `SMTP_FROM`, and `APP_BASE_URL`. Credentials stay outside
+`SMTP_PASSWORD`, `SMTP_FROM`, and `APP_BASE_URL`. `APP_BASE_URL` must be the
+frontend base URL that serves `/verify-email` and `/reset-password`; it is not
+the API URL unless frontend routes live there. Credentials stay outside
 committed files. Gmail requires an App Password.
 
 ### `POST /api/v1/auth/forgot-password`
@@ -330,6 +335,10 @@ Always returns `200` with the same response, whether account exists:
 Existing accounts receive one 30-minute reset token. Prior unused reset tokens
 become invalid. Invalid input, missing accounts, and email delivery failures
 remain indistinguishable through this endpoint.
+
+SMTP failure rolls back token invalidation and issuance. SMTP cannot participate
+in database commit: if delivery succeeds but commit later fails, delivered link
+may be unusable; another forgot-password request issues a replacement.
 
 ### `POST /api/v1/auth/reset-password`
 

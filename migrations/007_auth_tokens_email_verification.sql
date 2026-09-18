@@ -14,5 +14,3 @@ CREATE INDEX IF NOT EXISTS idx_auth_tokens_user_purpose
   ON auth_tokens (user_id, purpose);
 CREATE INDEX IF NOT EXISTS idx_auth_tokens_expiry
   ON auth_tokens (expires_at);
-CREATE INDEX IF NOT EXISTS idx_auth_tokens_hash
-  ON auth_tokens (token_hash);
