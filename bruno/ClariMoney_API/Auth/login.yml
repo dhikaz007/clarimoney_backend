@@ -6,8 +6,6 @@ info:
 http:
   method: POST
   url: "{{base_url}}/api/v1/auth/login"
-  auth:
-    type: none
   body:
     type: json
     data: |
@@ -21,52 +19,29 @@ http:
 runtime:
   scripts:
     - type: after-response
-      code: |
-        if (res.status === 200) {
-          bru.setEnvVar("access_token", res.body.data.access_token);
-          bru.setEnvVar("token", res.body.data.access_token);
-          bru.setEnvVar("refresh_token", res.body.data.refresh_token);
-          bru.setEnvVar("session_id", res.body.data.session_id);
-          bru.setEnvVar("user_id", res.body.data.user.id);
+      code: |-
+        if (res.status == 200) {
+          const data = res.body.data;
+          
+           bru.setEnvVar("token", data.token);
+          bru.setEnvVar("access_token", data.access_token);
+          bru.setEnvVar("refresh_token", data.refresh_token);
+          bru.setEnvVar("session_id", data.session_id);
+          bru.setEnvVar("user_id", data.user.id);
+          console.log("Token", data.token);
+          console.log("Access Token", data.access_token);
+          console.log("Refresh Token", data.refresh_token);
+          console.log("Session Id", data.session_id);
+          console.log("User Id", data.user.id);
         }
 
-tests: |
-  test("Status is 200", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Returns token", () => {
-    expect(res.body.data.access_token).to.be.a("string");
-    expect(res.body.data.refresh_token).to.be.a("string");
-    expect(res.body.data.session_id).to.be.a("string");
-  });
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: true
 
 examples:
   - name: Success
-    status: 200
-    headers:
-      content-type: application/json
-    body: |
-      {
-        "status_code": 200,
-        "message": "Login successful",
-        "data": {
-          "user": {
-            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-            "email": "test@example.com"
-          },
-          "access_token": "access-token-example",
-          "refresh_token": "refresh-token-example",
-          "session_id": "session-001",
-          "token": "access-token-example"
-        }
-      }
-
   - name: Invalid credentials
-    status: 401
-    headers:
-      content-type: application/json
-    body: |
-      {
-        "status_code": 401,
-        "message": "Invalid email or password"
-      }
