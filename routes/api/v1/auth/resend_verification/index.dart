@@ -18,6 +18,12 @@ Future<Response> onRequest(RequestContext context) async {
     final userId = context.read<AuthSession>().userId;
     final pool = context.read<Pool<dynamic>>();
     final emailService = _emailService(context);
+    final user = await pool.execute(
+      Sql.named('''SELECT email_verified_at FROM users WHERE id = @id'''),
+      parameters: {'id': userId},
+    );
+    if (user.isEmpty) throw _InvalidUserException();
+    if (user.first[0] != null) return _success();
     emailService.validateConfiguration();
     await pool.runTx((transaction) async {
       final rows = await transaction.execute(
@@ -44,10 +50,7 @@ Future<Response> onRequest(RequestContext context) async {
         token: issued.token,
       );
     });
-    return apiResponse(
-      statusCode: HttpStatus.ok,
-      message: 'If email is unverified, verification instructions were sent',
-    );
+    return _success();
   } on _InvalidUserException {
     return apiResponse(
       statusCode: HttpStatus.unauthorized,
@@ -70,6 +73,11 @@ Future<Response> onRequest(RequestContext context) async {
     );
   }
 }
+
+Response _success() => apiResponse(
+  statusCode: HttpStatus.ok,
+  message: 'If email is unverified, verification instructions were sent',
+);
 
 class _InvalidUserException implements Exception {}
 

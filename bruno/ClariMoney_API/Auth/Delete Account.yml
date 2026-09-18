@@ -29,7 +29,7 @@ examples:
   - name: Success
     status: 200
     body: |
-      {"status_code": 200, "message": "Account deleted successfully", "data": null}
+      {"status_code": 200, "message": "Account deleted successfully"}
   - name: Wrong or missing password
     status: 401
     body: |

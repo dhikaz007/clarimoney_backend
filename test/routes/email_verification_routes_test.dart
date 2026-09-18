@@ -237,7 +237,7 @@ void main() {
       );
       request.provide<AuthSession>(AuthSession(userId, sessionId));
       request.provide<EmailService>(
-        EmailService(environment: _mailEnvironment, sender: (_, __) async {}),
+        EmailService(environment: const {}, sender: (_, __) async {}),
       );
       final response = await resend.onRequest(_withPool(request, pool));
       expect(response.statusCode, HttpStatus.ok);

@@ -264,7 +264,7 @@ Success `200`:
 }
 ```
 
-Missing or failed SMTP configuration returns `500`:
+For unverified accounts, missing or failed SMTP configuration returns `500`:
 
 ```json
 {
@@ -274,11 +274,13 @@ Missing or failed SMTP configuration returns `500`:
 }
 ```
 
-Token issuance and delivery run within one database transaction. SMTP failure
-rolls back token invalidation and issuance, leaving no valid verification token
-until next resend. SMTP cannot participate in database commit: if mail delivery
-succeeds but database commit later fails, delivered link may be unusable; resend
-then issues a replacement.
+Verified accounts return success before SMTP validation and do not send mail.
+For unverified accounts, token issuance and delivery run within one database
+transaction. Invalid SMTP configuration is checked before token invalidation;
+existing tokens remain valid when configuration is missing or invalid. SMTP send
+failure rolls back token invalidation and issuance. SMTP cannot participate in
+database commit: if mail delivery succeeds but database commit later fails,
+delivered link may be unusable; resend then issues a replacement.
 
 ### `POST /api/v1/auth/verify-email`
 

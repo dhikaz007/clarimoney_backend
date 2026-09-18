@@ -30,13 +30,14 @@ Database:
 
 Review follow-up:
 
-- Resend now locks user row and atomically invalidates prior tokens plus issues one new token.
+- Resend loads verification state before SMTP validation; verified users return idempotent success without SMTP.
+- Unverified resend locks user row and atomically invalidates prior tokens plus issues one new token.
 - Concurrent resends leave one valid token.
 - Email delivery runs inside token transaction before commit. Delivery failure rolls back invalidation and issuance, leaving no new active token.
 - Resend accepts injectable `EmailService`; tests use fake successful and failing senders.
 - Added login-before-verification, successful resend, SMTP failure, concurrent resend, invalid token, and middleware ownership tests.
 - Expanded API docs for profile, resend, verify, SMTP requirements, and failure behavior.
-- SMTP configuration is validated before transaction issuance; invalid config leaves no active token.
+- SMTP configuration is validated before unverified transaction issuance; invalid config leaves prior active tokens unchanged.
 - No post-send cleanup path remains; transaction rollback handles sender failure. Raw token and SMTP details never enter logs.
 - Invalid-token test now closes its DB pool in `finally`.
 
@@ -48,5 +49,5 @@ Commits:
 
 Concerns:
 
-- Resend requires SMTP configuration. Missing configuration returns controlled `500`; prior unused tokens remain invalidated.
+- Unverified resend requires SMTP configuration. Missing configuration returns controlled `500`; prior unused tokens remain valid.
 - Unrelated local Bruno edits, Task 1 plan/spec files preserved and excluded from commit.
