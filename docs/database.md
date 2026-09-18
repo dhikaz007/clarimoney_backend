@@ -66,7 +66,7 @@ Menyimpan income atau expense user.
 | `category_id` | `UUID` | Yes | - | Category expense |
 | `type` | `VARCHAR(20)` | No | `expense` | Transaction type |
 | `amount` | `NUMERIC(15,2)` | No | - | Nominal expense |
-| `date` | `TIMESTAMPTZ` | No | - | Tanggal expense |
+| `date` | `TIMESTAMPTZ` | No | - | Tanggal expense; legacy wall-clock values normalized as UTC |
 | `note` | `VARCHAR(500)` | Yes | - | Catatan trimmed |
 | `created_at` | `TIMESTAMPTZ` | Yes | `CURRENT_TIMESTAMP` | Waktu pencatatan |
 
@@ -91,6 +91,11 @@ Constraints:
 | `idx_categories_name_search` | `categories` | Case-insensitive category search |
 | `uq_categories_owner_name_type` | `categories` | Mencegah duplicate category |
 
+Search indexes use `lower(...)` B-tree expressions for equality and prefix
+search paths. They do not accelerate arbitrary substring search. Add the
+`pg_trgm` extension and trigram indexes only when substring search becomes a
+measured requirement.
+
 ## Relationships
 
 ```text
@@ -112,7 +117,11 @@ Run numeric order:
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_initial_schema.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/002_mvp_constraints.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/009_phase2_unified_transactions.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/010_phase2_unified_transactions_review_fixes.sql
 ```
+
+Migration 010 applies legacy date conversion with `AT TIME ZONE 'UTC'`; API
+dates remain full ISO-8601 timestamps with timezone and milliseconds where emitted.
 
 `init_schema.sql` deprecated. Gunakan folder `migrations/`.
 

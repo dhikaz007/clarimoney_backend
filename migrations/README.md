@@ -12,6 +12,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/006_session_id_rotation.sq
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/007_auth_tokens_email_verification.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/008_drop_redundant_auth_token_hash_index.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/009_phase2_unified_transactions.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/010_phase2_unified_transactions_review_fixes.sql
 ```
 
 Production uses `DATABASE_URL`; never commit credentials.
@@ -34,6 +35,12 @@ It adds nullable notes, category lifecycle fields, income starter categories,
 ownership/type/status validation, and transaction/category search indexes.
 Apply only after migrations 001–008. Verify old transaction rows retain IDs,
 amounts, dates, and category references.
+
+Migration 010 is corrective for databases that already applied 009. It fails
+before constraints when legacy amounts or category names are invalid, converts
+legacy date wall-clock values with `AT TIME ZONE 'UTC'`, blocks category owner/
+type mutations referenced by transactions, and deterministically upserts exact
+income starter rows. Rerun 010 safely after a failed or partial attempt.
 
 Verify release schema state:
 

@@ -3,9 +3,12 @@ set -euo pipefail
 
 root_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 migration="$root_dir/migrations/009_phase2_unified_transactions.sql"
+corrective="$root_dir/migrations/010_phase2_unified_transactions_review_fixes.sql"
 
 [[ -f "$migration" ]]
+[[ -f "$corrective" ]]
 sql=$(tr '[:upper:]' '[:lower:]' <"$migration")
+corrective_sql=$(tr '[:upper:]' '[:lower:]' <"$corrective")
 
 for required in \
   "alter table transactions" \
@@ -21,6 +24,28 @@ for required in \
   "create index" \
   "trigger"; do
   [[ "$sql" == *"$required"* ]] || { printf 'missing SQL: %s\n' "$required" >&2; exit 1; }
+done
+
+for required in \
+  'do $$' \
+  "amount <= 0" \
+  "char_length(btrim(name))" \
+  "raise exception 'migration 009 preflight failed" \
+  "at time zone 'utc'" \
+  "categories_identity_mutation_guard" \
+  "on conflict (id) do update set" \
+  "salary" "bonus" "freelance" "gift" "other" \
+  "on conflict"; do
+  [[ "$corrective_sql" == *"$required"* ]] || { printf 'missing corrective SQL: %s\n' "$required" >&2; exit 1; }
+done
+
+for required in \
+  "equality and prefix" \
+  "pg_trgm" \
+  "010_phase2_unified_transactions_review_fixes.sql"; do
+  grep -Fqi "$required" "$root_dir/migrations/README.md" "$root_dir/docs/database.md" || {
+    printf 'missing documentation: %s\n' "$required" >&2; exit 1;
+  }
 done
 
 printf '%s\n' 'Phase 2 migration contract tests passed.'
