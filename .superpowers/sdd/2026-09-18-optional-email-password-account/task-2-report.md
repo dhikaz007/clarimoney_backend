@@ -36,11 +36,15 @@ Review follow-up:
 - Resend accepts injectable `EmailService`; tests use fake successful and failing senders.
 - Added login-before-verification, successful resend, SMTP failure, concurrent resend, invalid token, and middleware ownership tests.
 - Expanded API docs for profile, resend, verify, SMTP requirements, and failure behavior.
+- SMTP configuration is validated before transaction issuance; invalid config leaves no active token.
+- Delivery-failure cleanup catches and logs cleanup error type only; raw token and SMTP details never enter logs.
+- Invalid-token test now closes its DB pool in `finally`.
 
 Commits:
 
 - `a72b612 feat: add optional email verification routes`
 - `96cb6e1 fix: close email verification review findings`
+- Pending review-fix commit: SMTP preflight and cleanup handling.
 
 Concerns:
 

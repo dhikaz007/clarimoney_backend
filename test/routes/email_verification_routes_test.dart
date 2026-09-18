@@ -304,6 +304,30 @@ void main() {
     }
   }, skip: _skipDbTest);
 
+  test('invalid SMTP configuration issues no verification token', () async {
+    final pool = _pool();
+    final userId = const Uuid().v4();
+    final sessionId = const Uuid().v4();
+    try {
+      await _insertUser(pool, userId);
+      await _insertSession(pool, userId, sessionId);
+      final request = TestRequestContext(
+        path: '/api/v1/auth/resend-verification',
+        method: HttpMethod.post,
+      );
+      request.provide<AuthSession>(AuthSession(userId, sessionId));
+      request.provide<EmailService>(
+        EmailService(environment: const {'SMTP_PORT': 'bad'}),
+      );
+      final response = await resend.onRequest(_withPool(request, pool));
+      expect(response.statusCode, HttpStatus.internalServerError);
+      expect(await _validVerificationTokens(pool, userId), isEmpty);
+    } finally {
+      await _deleteUser(pool, userId);
+      await pool.close();
+    }
+  }, skip: _skipDbTest);
+
   test('concurrent resends leave one valid token', () async {
     final pool = _pool();
     final userId = const Uuid().v4();
@@ -336,17 +360,22 @@ void main() {
   }, skip: _skipDbTest);
 
   test('invalid verification token returns generic bad request', () async {
-    final response = await verify.onRequest(
-      _withPool(
-        TestRequestContext(
-          path: '/api/v1/auth/verify-email',
-          method: HttpMethod.post,
-          body: jsonEncode({'token': 'invalid-token'}),
+    final pool = _pool();
+    try {
+      final response = await verify.onRequest(
+        _withPool(
+          TestRequestContext(
+            path: '/api/v1/auth/verify-email',
+            method: HttpMethod.post,
+            body: jsonEncode({'token': 'invalid-token'}),
+          ),
+          pool,
         ),
-        _pool(),
-      ),
-    );
-    expect(response.statusCode, HttpStatus.badRequest);
+      );
+      expect(response.statusCode, HttpStatus.badRequest);
+    } finally {
+      await pool.close();
+    }
   }, skip: _skipDbTest);
 
   test('middleware rejects token using another user session', () async {

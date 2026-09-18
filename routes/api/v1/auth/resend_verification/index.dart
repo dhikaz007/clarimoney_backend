@@ -19,6 +19,7 @@ Future<Response> onRequest(RequestContext context) async {
     final userId = context.read<AuthSession>().userId;
     final pool = context.read<Pool<dynamic>>();
     final emailService = _emailService(context);
+    emailService.validateConfiguration();
     AuthTokenIssue? issued;
     String? email;
     await pool.runTx((transaction) async {
@@ -50,11 +51,18 @@ Future<Response> onRequest(RequestContext context) async {
           token: issued!.token,
         );
       } on Object {
-        await pool.execute(
-          Sql.named('''UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP
-            WHERE token_hash = @hash AND used_at IS NULL'''),
-          parameters: {'hash': AuthTokenUtils.hash(issued!.token)},
-        );
+        try {
+          await pool.execute(
+            Sql.named('''UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP
+              WHERE token_hash = @hash AND used_at IS NULL'''),
+            parameters: {'hash': AuthTokenUtils.hash(issued!.token)},
+          );
+        } catch (cleanupError) {
+          stderr.writeln(
+            'Verification token cleanup failed after email delivery failure: '
+            '${cleanupError.runtimeType}',
+          );
+        }
         rethrow;
       }
     }

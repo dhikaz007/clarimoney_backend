@@ -27,6 +27,14 @@ class EmailService {
   final Map<String, String> _environment;
   final MailSender _sender;
 
+  void validateConfiguration() {
+    _config();
+    final base = _environment['APP_BASE_URL'];
+    if (base == null || base.trim().isEmpty) {
+      throw EmailConfigurationException('APP_BASE_URL is not configured');
+    }
+  }
+
   Future<void> sendVerification({
     required String email,
     required String token,
@@ -56,11 +64,9 @@ class EmailService {
     String token,
     String heading,
   ) async {
+    validateConfiguration();
     final config = _config();
-    final base = _environment['APP_BASE_URL'];
-    if (base == null || base.trim().isEmpty) {
-      throw EmailConfigurationException('APP_BASE_URL is not configured');
-    }
+    final base = _environment['APP_BASE_URL']!;
     final link = '${base.replaceFirst(RegExp(r'\/$'), '')}$path?token=$token';
     final message = Message()
       ..from = config.from
