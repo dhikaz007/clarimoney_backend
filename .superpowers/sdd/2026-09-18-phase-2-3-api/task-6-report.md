@@ -35,6 +35,9 @@ start remains previous-period data.
   `routes/api/v1/categories/[id]/index.dart`; no known rogue-route warning.
 - Bruno YAML parse — passed; 38 files parsed.
 - `git diff --check` — passed.
+- Final review focused comparison tests — 27 passed.
+- Final review valid-secret full suite — 91 passed, 51 DB-dependent tests
+  skipped because no database URL was available.
 - `./scripts/verify_migrations.sh` — historical Neon result only; rerun against
   disposable release DB before deploy.
 
