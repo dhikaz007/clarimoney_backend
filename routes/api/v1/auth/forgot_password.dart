@@ -8,6 +8,7 @@ import 'package:postgres/postgres.dart';
 
 const _successMessage =
     'If an account exists, password reset instructions were sent';
+const _minimumResponseTime = Duration(milliseconds: 250);
 
 Future<Response> onRequest(RequestContext context) async {
   if (context.request.method != HttpMethod.post) {
@@ -17,6 +18,7 @@ Future<Response> onRequest(RequestContext context) async {
     );
   }
 
+  final started = Stopwatch()..start();
   try {
     final body = await context.request.json();
     final email = body is Map<String, dynamic> && body['email'] is String
@@ -59,6 +61,9 @@ Future<Response> onRequest(RequestContext context) async {
   } catch (_) {
     // Keep account existence undiscoverable through this endpoint.
   }
+
+  final remaining = _minimumResponseTime - started.elapsed;
+  if (remaining > Duration.zero) await Future<void>.delayed(remaining);
 
   return apiResponse(statusCode: HttpStatus.ok, message: _successMessage);
 }

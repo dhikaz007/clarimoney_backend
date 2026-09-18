@@ -34,3 +34,19 @@ Recorded in final response after commit.
 
 - Forgot-password delivery errors intentionally return the same success response to prevent account enumeration.
 - Existing unrelated Bruno/docs changes remained unstaged.
+
+## Review follow-up
+
+- Added a 250 ms minimum forgot-password response duration for existing, missing,
+  invalid, and delivery-failure paths. No infrastructure added.
+- Preserved generic success response. No raw token logging added.
+- Added Neon-backed coverage for email normalization, SMTP rollback, prior-token
+  invalidation, wrong purpose, exact 30-minute lifetime, and old access-token
+  rejection after `token_version` increment/session revocation.
+
+## Follow-up verification
+
+- Focused Neon suite: 9 passed.
+- Full Neon-backed suite: 74 passed.
+- `dart analyze`: passed with existing informational lints only.
+- `dart_frog build`: passed.
