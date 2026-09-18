@@ -14,7 +14,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
     try {
       final result = await pool.execute(
         Sql.named('''
-          SELECT id, name, icon, color, type
+           SELECT id, name, icon, color, type, status, origin
           FROM categories
           WHERE user_id = @userId OR user_id IS NULL
         '''),
@@ -28,6 +28,8 @@ FutureOr<Response> onRequest(RequestContext context) async {
           'icon': row[2],
           'color': row[3],
           'type': row[4],
+          'status': row[5],
+          'origin': row[6],
         };
       }).toList();
 
@@ -56,14 +58,17 @@ FutureOr<Response> onRequest(RequestContext context) async {
       final color = (body['color'] as String?)?.trim();
       final type = (body['type'] as String?)?.trim();
 
-      if (name == null || name.isEmpty || name.length > 100) {
+      if (name == null || name.isEmpty || name.length > 50) {
         return _error(
           HttpStatus.badRequest,
-          'Name must contain 1-100 characters',
+          'Name must contain 1-50 characters',
         );
       }
-      if (type != 'expense') {
-        return _error(HttpStatus.badRequest, 'Category type must be expense');
+      if (type != 'expense' && type != 'income') {
+        return _error(
+          HttpStatus.badRequest,
+          'Category type must be income or expense',
+        );
       }
       if (color != null && !RegExp(r'^#[0-9A-Fa-f]{6}$').hasMatch(color)) {
         return _error(HttpStatus.badRequest, 'Color must use #RRGGBB format');
@@ -86,8 +91,8 @@ FutureOr<Response> onRequest(RequestContext context) async {
       final id = const Uuid().v4();
       await pool.execute(
         Sql.named('''
-          INSERT INTO categories (id, user_id, name, icon, color, type)
-          VALUES (@id, @userId, @name, @icon, @color, @type)
+           INSERT INTO categories (id, user_id, name, icon, color, type, origin)
+           VALUES (@id, @userId, @name, @icon, @color, @type, 'user_created')
         '''),
         parameters: {
           'id': id,

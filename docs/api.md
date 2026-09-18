@@ -66,6 +66,40 @@ Protected:
 - Transactions.
 - Summary.
 
+## Transaction API
+
+All transaction endpoints require JWT. Amounts are positive values with at most
+two decimal places. `type` is `income` or `expense`; omitted `type` means
+`expense` for legacy clients. Both types require an active category of matching
+type. Dates require full ISO-8601 datetime input and return UTC ISO strings.
+
+- `GET /api/v1/transactions?page=1&limit=10&type=all&period=this_month&category_id=&search=`
+- `POST /api/v1/transactions`
+- `GET /api/v1/transactions/:id`
+- `PUT /api/v1/transactions/:id`
+- `DELETE /api/v1/transactions/:id`
+
+Create/update body:
+
+```json
+{"type":"income","category_id":"uuid","amount":12500000,"date":"2026-09-15T08:30:00.000Z","note":"Monthly salary"}
+```
+
+`note` is trimmed and limited to 500 characters. Search matches note or
+category name. Filters combine with AND. Results order by date, created time,
+then ID descending.
+
+## Category lifecycle
+
+- `GET /api/v1/categories`
+- `POST /api/v1/categories` with `name`, `type`, optional `icon` and `color`
+- `PUT /api/v1/categories/:id` with `name` to rename
+- `PATCH /api/v1/categories/:id` with `status: "archived"` or `"active"`
+
+Only categories owned by authenticated user can be changed. System categories
+remain read-only. Archived categories retain historical transactions but cannot
+receive new assignments.
+
 ## Health check
 
 ### `GET /`

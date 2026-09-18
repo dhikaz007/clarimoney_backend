@@ -1,0 +1,14 @@
+info:
+  name: Update Category
+  type: http
+  seq: 2
+http:
+  method: PATCH
+  url: "{{base_url}}/api/v1/categories/{{category_id}}"
+  auth:
+    type: bearer
+    token: "{{token}}"
+  body:
+    type: json
+    body: |-
+      {"status":"archived"}
