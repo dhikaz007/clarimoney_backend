@@ -56,11 +56,29 @@ SELECT 1 FROM information_schema.columns WHERE table_schema = 'public'
 SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
   AND tablename = 'auth_tokens' AND indexname = 'auth_tokens_token_hash_key';
 SELECT to_regclass('public.idx_auth_tokens_hash') AS legacy_hash_index;
+SELECT to_regclass('public.idx_transactions_user_type_date') AS transaction_filter_index;
+SELECT to_regclass('public.idx_categories_user_type_status') AS category_filter_index;
+SELECT column_name, is_nullable, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'transactions'
+  AND column_name IN ('type', 'category_id', 'date')
+ORDER BY column_name;
 SQL
 ```
 
 Expected: `auth_tokens` exists, required checks return `1`, and
-`legacy_hash_index` is empty. Check does not repair schema drift.
+`legacy_hash_index` is empty. Phase 2 filter indexes exist, transaction `type`
+and `category_id` are non-null, and `date` is `timestamp with time zone`. Check
+does not repair schema drift.
+
+Automated release verifier:
+
+```bash
+./scripts/verify_migrations.sh
+```
+
+Verifier requires `DATABASE_URL` and checks auth, transaction, category, index,
+and income starter-category state without modifying data.
 
 ## Release environment
 

@@ -11,6 +11,10 @@ BEGIN
     RAISE EXCEPTION 'public.auth_tokens table is missing; apply migrations 007 and 008';
   END IF;
 
+  IF to_regclass('public.transactions') IS NULL OR to_regclass('public.categories') IS NULL THEN
+    RAISE EXCEPTION 'transactions or categories table is missing; apply migrations 009 and 010';
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'users'
@@ -63,6 +67,53 @@ BEGIN
 
   IF to_regclass('public.idx_auth_tokens_hash') IS NOT NULL THEN
     RAISE EXCEPTION 'legacy idx_auth_tokens_hash remains; apply migration 008';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'transactions'
+      AND column_name = 'type' AND data_type = 'character varying'
+      AND is_nullable = 'NO'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'transactions'
+      AND column_name = 'category_id' AND is_nullable = 'NO'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'transactions'
+      AND column_name = 'date' AND data_type = 'timestamp with time zone'
+  ) THEN
+    RAISE EXCEPTION 'transactions phase 2 columns are incomplete';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'categories'
+      AND column_name = 'type' AND is_nullable = 'NO'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'categories'
+      AND column_name = 'status' AND is_nullable = 'NO'
+  ) OR NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'categories'
+      AND column_name = 'origin' AND is_nullable = 'NO'
+  ) THEN
+    RAISE EXCEPTION 'categories phase 2 columns are incomplete';
+  END IF;
+
+  IF to_regclass('public.idx_transactions_user_type_date') IS NULL
+     OR to_regclass('public.idx_transactions_category') IS NULL
+     OR to_regclass('public.idx_categories_user_type_status') IS NULL THEN
+    RAISE EXCEPTION 'phase 2 query indexes are missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM categories
+    WHERE id = '00000000-0000-0000-0000-000000000101'
+      AND type = 'income' AND status = 'active' AND origin = 'system'
+  ) THEN
+    RAISE EXCEPTION 'income starter categories are missing; apply migration 010';
   END IF;
 END $$;
 SQL
