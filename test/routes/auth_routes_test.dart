@@ -23,7 +23,6 @@ import '../../routes/api/v1/auth/sessions/_middleware.dart'
     as sessions_middleware;
 import '../../routes/api/v1/auth/register.dart' as register;
 import '../support/test_database.dart';
-import '../support/test_database.dart';
 
 class _MockAuthRequestContext extends Mock implements RequestContext {}
 
