@@ -25,7 +25,7 @@ Status: complete.
 ## Commit
 
 - Initial Task 5 commit: `4ae3b36`.
-- Review-fix commit: recorded after final validation and commit.
+- Review-fix commit: `37b7bb7`.
 
 ## Concerns
 
