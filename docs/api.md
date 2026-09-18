@@ -47,6 +47,12 @@ Public:
 
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
+- `POST /api/v1/auth/verify-email`
+
+Protected auth:
+
+- `GET /api/v1/auth/me`
+- `POST /api/v1/auth/resend-verification`
 
 Protected:
 
@@ -110,7 +116,8 @@ Success `201`:
   "data": {
     "user": {
       "id": "uuid",
-      "email": "user@example.com"
+      "email": "user@example.com",
+      "email_verified": false
     },
     "access_token": "jwt",
     "refresh_token": "opaque-refresh-token",

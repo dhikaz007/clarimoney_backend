@@ -1,0 +1,36 @@
+# Task 2 Report
+
+Status: complete.
+
+Implemented:
+
+- Registration returns `email_verified: false`; registration and login remain available before verification.
+- Added authenticated `GET /api/v1/auth/me`.
+- Added authenticated `POST /api/v1/auth/resend-verification`.
+- Added public `POST /api/v1/auth/verify-email`.
+- Resend invalidates unused verification tokens, issues 24-hour token, sends mail through foundation services.
+- Verified resend returns generic success without sending mail.
+- Verify updates `email_verified_at` and consumes token atomically.
+- Invalid, expired, and reused tokens return generic `400`.
+- Added Neon-backed route coverage for registration state, profile state, verification success/reuse, expiry, resend invalidation, and verified resend.
+- Updated API documentation.
+
+Verification:
+
+- `dart test` with repository `.env`: passed 57 tests.
+- `dart test test/routes/email_verification_routes_test.dart` with repository `.env`: passed 6 tests.
+- `dart analyze`: passed; existing info diagnostics only.
+- `dart_frog build`: passed.
+- `git diff --check`: passed.
+
+Database:
+
+- No migration added. Migration 007 already provides `users.email_verified_at` and `auth_tokens`.
+- Neon migration was applied during Task 1.
+
+Commit: pending.
+
+Concerns:
+
+- Resend requires SMTP configuration. Missing configuration returns controlled `500`; prior unused tokens remain invalidated.
+- Unrelated local Bruno edits, Task 1 plan/spec files preserved and excluded from commit.

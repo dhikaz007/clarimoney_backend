@@ -93,7 +93,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
       statusCode: HttpStatus.created,
       message: 'Registration successful',
       data: {
-        'user': {'id': id, 'email': email},
+        'user': {'id': id, 'email': email, 'email_verified': false},
         'access_token': session['accessToken'],
         'refresh_token': session['refreshToken'],
         'session_id': session['sessionId'],
