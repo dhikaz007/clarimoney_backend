@@ -10,11 +10,14 @@ http:
     type: bearer
     token: "{{revoked_access_token}}"
 
-tests: |
-  test("Revoked device access is rejected", () => {
-    expect(res.status).to.equal(401);
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Revoked device access is rejected", () => {
+          expect(res.status).to.equal(401);
+        });
+        
 examples:
   - name: Unauthorized
     status: 401

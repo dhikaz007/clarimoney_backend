@@ -16,15 +16,18 @@ http:
         "password": "{{current_password}}"
       }
 
-tests: |
-  test("Account deletion succeeds", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Confirms deletion without credentials", () => {
-    expect(res.body.message).to.equal("Account deleted successfully");
-    expect(JSON.stringify(res.body)).to.not.include("password");
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Account deletion succeeds", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Does not echo password", () => {
+          expect(res.body.message).to.equal("Account deleted successfully");
+          expect(JSON.stringify(res.body)).to.not.include("password");
+        });
+        
 examples:
   - name: Success
     status: 200

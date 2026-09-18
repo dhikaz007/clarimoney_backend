@@ -16,11 +16,12 @@ runtime:
       code: |
         bru.setEnvVar("revoked_access_token", bru.getEnvVar("access_token"));
 
-tests: |
-  test("Status is 200", () => {
-    expect(res.status).to.equal(200);
-  });
-
+    - type: tests
+      code: |-
+        test("Status is 200", () => {
+          expect(res.status).to.equal(200);
+        });
+        
 examples:
   - name: Success
     status: 200

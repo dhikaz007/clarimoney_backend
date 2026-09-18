@@ -10,20 +10,23 @@ http:
     type: bearer
     token: "{{access_token}}"
 
-tests: |
-  test("Status is 200", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Returns sessions", () => {
-    expect(res.body.data).to.be.an("array");
-  });
-  test("Includes current session metadata", () => {
-    const session = res.body.data.find((item) => item.id === bru.getEnvVar("session_id"));
-    expect(session).to.exist;
-    expect(session.device_id).to.equal(bru.getEnvVar("device_id"));
-    expect(session.device_name).to.equal(bru.getEnvVar("device_name"));
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Status is 200", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Returns sessions", () => {
+          expect(res.body.data).to.be.an("array");
+        });
+        test("Includes current session metadata", () => {
+          const session = res.body.data.find((item) => item.id === bru.getEnvVar("session_id"));
+          expect(session).to.exist;
+          expect(session.device_id).to.equal(bru.getEnvVar("device_id"));
+          expect(session.device_name).to.equal(bru.getEnvVar("device_name"));
+        });
+        
 examples:
   - name: Success
     status: 200

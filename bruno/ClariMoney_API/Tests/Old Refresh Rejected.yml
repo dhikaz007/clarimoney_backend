@@ -15,11 +15,14 @@ http:
         "refresh_token": "{{previous_refresh_token}}"
       }
 
-tests: |
-  test("Old refresh token is rejected", () => {
-    expect(res.status).to.equal(401);
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Old refresh token is rejected", () => {
+          expect(res.status).to.equal(401);
+        });
+        
 examples:
   - name: Unauthorized
     status: 401

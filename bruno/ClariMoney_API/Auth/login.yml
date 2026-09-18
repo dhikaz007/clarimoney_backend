@@ -30,6 +30,17 @@ runtime:
           bru.setEnvVar("user_id", data.user.id);
         }
 
+    - type: tests
+      code: |-
+        test("Status is 200", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Returns session tokens", () => {
+          expect(res.body.data.access_token).to.be.a("string");
+          expect(res.body.data.refresh_token).to.be.a("string");
+          expect(res.body.data.session_id).to.be.a("string");
+        });
+
 settings:
   encodeUrl: true
   timeout: 0

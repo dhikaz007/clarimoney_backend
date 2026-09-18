@@ -18,11 +18,14 @@ http:
         "date": "2026-09-16T00:00:00.000Z"
       }
 
-tests: |
-  test("Status is 200", () => {
-    expect(res.status).to.equal(200);
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Status is 200", () => {
+          expect(res.status).to.equal(200);
+        });
+        
 examples:
   - name: Success
     status: 200

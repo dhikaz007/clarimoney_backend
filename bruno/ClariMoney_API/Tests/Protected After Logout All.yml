@@ -10,11 +10,14 @@ http:
     type: bearer
     token: "{{access_token}}"
 
-tests: |
-  test("All-device logout rejects access", () => {
-    expect(res.status).to.equal(401);
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("All-device logout rejects access", () => {
+          expect(res.status).to.equal(401);
+        });
+        
 examples:
   - name: Unauthorized
     status: 401

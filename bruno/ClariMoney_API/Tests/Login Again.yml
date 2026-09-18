@@ -30,15 +30,16 @@ runtime:
           bru.setEnvVar("user_id", res.body.data.user.id);
         }
 
-tests: |
-  test("Login succeeds", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Persists fresh session state", () => {
-    expect(res.body.data.session_id).to.be.a("string");
-    expect(res.body.data.refresh_token).to.be.a("string");
-  });
-
+    - type: tests
+      code: |-
+        test("Login succeeds", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Persists fresh session state", () => {
+          expect(res.body.data.session_id).to.be.a("string");
+          expect(res.body.data.refresh_token).to.be.a("string");
+        });
+        
 examples:
   - name: Success
     status: 200

@@ -9,14 +9,17 @@ http:
   auth:
     type: none
 
-tests: |
-  test("Status is 200", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("DB is connected", () => {
-    expect(res.body.data.db).to.equal("connected");
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Status is 200", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("DB is connected", () => {
+          expect(res.body.data.db).to.equal("connected");
+        });
+        
 examples:
   - name: Success
     status: 200

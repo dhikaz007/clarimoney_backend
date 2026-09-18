@@ -30,16 +30,17 @@ runtime:
           bru.setEnvVar("user_id", res.body.data.user.id);
         }
 
-tests: |
-  test("Status is 201", () => {
-    expect(res.status).to.equal(201);
-  });
-  test("Returns token", () => {
-    expect(res.body.data.access_token).to.be.a("string");
-    expect(res.body.data.refresh_token).to.be.a("string");
-    expect(res.body.data.session_id).to.be.a("string");
-  });
-
+    - type: tests
+      code: |-
+        test("Status is 201", () => {
+          expect(res.status).to.equal(201);
+        });
+        test("Returns session tokens", () => {
+          expect(res.body.data.access_token).to.be.a("string");
+          expect(res.body.data.refresh_token).to.be.a("string");
+          expect(res.body.data.session_id).to.be.a("string");
+        });
+        
 examples:
   - name: Success
     status: 201

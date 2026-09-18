@@ -10,11 +10,14 @@ http:
     type: bearer
     token: "{{access_token}}"
 
-tests: |
-  test("Logged-out access is rejected", () => {
-    expect(res.status).to.equal(401);
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Logged-out access is rejected", () => {
+          expect(res.status).to.equal(401);
+        });
+        
 examples:
   - name: Unauthorized
     status: 401

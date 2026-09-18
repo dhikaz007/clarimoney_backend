@@ -10,11 +10,14 @@ http:
     type: bearer
     token: "{{access_token_2}}"
 
-tests: |
-  test("Logout-all revokes second device", () => {
-    expect(res.status).to.equal(401);
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Logout-all revokes second device", () => {
+          expect(res.status).to.equal(401);
+        });
+        
 examples:
   - name: Unauthorized
     status: 401

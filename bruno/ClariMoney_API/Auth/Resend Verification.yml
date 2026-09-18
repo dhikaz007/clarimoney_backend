@@ -10,14 +10,17 @@ http:
     type: bearer
     token: "{{access_token}}"
 
-tests: |
-  test("Request succeeds", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Does not expose token", () => {
-    expect(JSON.stringify(res.body)).to.not.include("token");
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Request succeeds", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Does not expose token", () => {
+          expect(JSON.stringify(res.body)).to.not.include("token");
+        });
+        
 examples:
   - name: Success or already verified
     status: 200

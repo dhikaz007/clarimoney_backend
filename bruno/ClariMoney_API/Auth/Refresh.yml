@@ -26,15 +26,16 @@ runtime:
           bru.setEnvVar("refresh_token", res.body.data.refresh_token);
         }
 
-tests: |
-  test("Status is 200", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Returns rotated tokens", () => {
-    expect(res.body.data.access_token).to.be.a("string");
-    expect(res.body.data.refresh_token).to.be.a("string");
-  });
-
+    - type: tests
+      code: |-
+        test("Status is 200", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Returns rotated tokens", () => {
+          expect(res.body.data.access_token).to.be.a("string");
+          expect(res.body.data.refresh_token).to.be.a("string");
+        });
+        
 examples:
   - name: Success
     status: 200

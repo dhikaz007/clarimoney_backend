@@ -23,11 +23,14 @@ postScript: |
     bru.setVar("transaction_id", res.body.data.id);
   }
 
-tests: |
-  test("Status is 201", () => {
-    expect(res.status).to.equal(201);
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Status is 201", () => {
+          expect(res.status).to.equal(201);
+        });
+        
 examples:
   - name: Success
     status: 201

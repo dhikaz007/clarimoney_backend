@@ -18,14 +18,15 @@ runtime:
           bru.setEnvVar("email_verified", String(res.body.data.email_verified));
         }
 
-tests: |
-  test("Status is 200", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Returns profile state", () => {
-    expect(res.body.data).to.have.keys("id", "email", "email_verified");
-  });
-
+    - type: tests
+      code: |-
+        test("Status is 200", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Returns profile state", () => {
+          expect(res.body.data).to.have.keys("id", "email", "email_verified");
+        });
+        
 examples:
   - name: Success
     status: 200

@@ -10,15 +10,18 @@ http:
     type: bearer
     token: "{{access_token_2}}"
 
-tests: |
-  test("Second-device access works before logout-all", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Second-device token remains isolated", () => {
-    expect(bru.getEnvVar("access_token_2")).to.be.a("string").and.not.empty;
-    expect(bru.getEnvVar("access_token_2")).to.not.equal(bru.getEnvVar("access_token"));
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Second-device access works before logout-all", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Second-device token remains isolated", () => {
+          expect(bru.getEnvVar("access_token_2")).to.be.a("string").and.not.empty;
+          expect(bru.getEnvVar("access_token_2")).to.not.equal(bru.getEnvVar("access_token"));
+        });
+        
 examples:
   - name: Success
     status: 200

@@ -10,14 +10,17 @@ http:
     type: bearer
     token: "{{token}}"
 
-tests: |
-  test("Status is 200", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Returns array", () => {
-    expect(res.body.data).to.be.an("array");
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Status is 200", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Returns array", () => {
+          expect(res.body.data).to.be.an("array");
+        });
+        
 examples:
   - name: Success
     status: 200

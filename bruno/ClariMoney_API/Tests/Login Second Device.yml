@@ -28,15 +28,16 @@ runtime:
           bru.setEnvVar("session_id_2", res.body.data.session_id);
         }
 
-tests: |
-  test("Second-device login succeeds", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Returns second session state", () => {
-    expect(res.body.data.session_id).to.be.a("string");
-    expect(res.body.data.refresh_token).to.be.a("string");
-  });
-
+    - type: tests
+      code: |-
+        test("Second-device login succeeds", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Returns second session state", () => {
+          expect(res.body.data.session_id).to.be.a("string");
+          expect(res.body.data.refresh_token).to.be.a("string");
+        });
+        
 examples:
   - name: Success
     status: 200

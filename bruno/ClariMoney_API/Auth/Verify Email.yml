@@ -13,14 +13,17 @@ http:
         "token": "{{verification_token}}"
       }
 
-tests: |
-  test("Verification succeeds", () => {
-    expect(res.status).to.equal(200);
-  });
-  test("Reports verification state only", () => {
-    expect(res.body.data.email_verified).to.equal(true);
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Verification succeeds", () => {
+          expect(res.status).to.equal(200);
+        });
+        test("Reports verification state only", () => {
+          expect(res.body.data.email_verified).to.equal(true);
+        });
+        
 examples:
   - name: Success
     status: 200

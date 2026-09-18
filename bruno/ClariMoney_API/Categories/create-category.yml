@@ -24,14 +24,17 @@ postScript: |
     bru.setVar("category_id", res.body.data.id);
   }
 
-tests: |
-  test("Status is 201", () => {
-    expect(res.status).to.equal(201);
-  });
-  test("Returns id", () => {
-    expect(res.body.data).to.have.property("id");
-  });
-
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Status is 201", () => {
+          expect(res.status).to.equal(201);
+        });
+        test("Returns id", () => {
+          expect(res.body.data).to.have.property("id");
+        });
+        
 examples:
   - name: Success
     status: 201
