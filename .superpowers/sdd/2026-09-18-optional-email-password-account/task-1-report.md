@@ -26,6 +26,8 @@ Concerns:
 - Full test run without `JWT_SECRET` fails two pre-existing JWT tests by design. Secret-injected run passes.
 - SMTP sends require all documented variables, including `APP_BASE_URL`.
 
+Follow-up commit: `98de3e4` (`test: verify auth token persistence and consumption`).
+
 ## Follow-up findings fixed
 
 - Applied migration 007 to configured Neon using repository `.env` in a subprocess;
