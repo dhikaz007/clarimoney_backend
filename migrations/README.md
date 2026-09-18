@@ -29,7 +29,8 @@ schema keeps the unique `auth_tokens_token_hash_key` index plus the required
 user/purpose and expiry indexes. `DROP INDEX IF EXISTS` makes cleanup safe for
 databases already migrated to current 007.
 
-Migration 009 unifies transactions for income and expense types. Existing
+Migration 009 unifies transactions for income and expense types. It runs
+legacy-data preflight before adding constraints. Existing
 transactions backfill to `expense`; existing categories retain `expense` type.
 It adds nullable notes, category lifecycle fields, income starter categories,
 ownership/type/status validation, and transaction/category search indexes.
@@ -40,7 +41,10 @@ Migration 010 is corrective for databases that already applied 009. It fails
 before constraints when legacy amounts or category names are invalid, converts
 legacy date wall-clock values with `AT TIME ZONE 'UTC'`, blocks category owner/
 type mutations referenced by transactions, and deterministically upserts exact
-income starter rows. Rerun 010 safely after a failed or partial attempt.
+income starter rows. Apply 009 first on databases at 001–008; apply 010 only
+after 009. Rerun 010 safely after a failed or partial attempt; its date recast
+only runs for `timestamp without time zone`, avoiding duplicate/conflicting
+changes after 009.
 
 Verify release schema state:
 

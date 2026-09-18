@@ -1,15 +1,45 @@
 -- Phase 2: unify income and expense transactions.
 
+BEGIN;
+SET LOCAL TIME ZONE 'UTC';
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM transactions WHERE amount IS NULL OR amount <= 0) THEN
+    RAISE EXCEPTION 'Migration 009 preflight failed: transactions contain NULL or non-positive amounts';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM categories
+    WHERE name IS NULL OR btrim(name) = '' OR name <> btrim(name) OR char_length(btrim(name)) > 50
+  ) THEN
+    RAISE EXCEPTION 'Migration 009 preflight failed: categories contain blank, untrimmed, or overlong names';
+  END IF;
+END $$;
+
 ALTER TABLE transactions
   ADD COLUMN IF NOT EXISTS type VARCHAR(20) NOT NULL DEFAULT 'expense',
   ADD COLUMN IF NOT EXISTS note VARCHAR(500);
+
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'transactions'
+      AND column_name = 'date'
+      AND data_type = 'timestamp without time zone'
+  ) THEN
+    ALTER TABLE transactions
+      ALTER COLUMN date TYPE TIMESTAMPTZ
+      USING (date AT TIME ZONE 'UTC');
+  END IF;
+END $$;
 
 UPDATE transactions SET type = 'expense' WHERE type IS NULL;
 
 ALTER TABLE transactions
   ALTER COLUMN type SET DEFAULT 'expense',
   ALTER COLUMN type SET NOT NULL,
-  ALTER COLUMN date TYPE TIMESTAMPTZ USING date,
   DROP CONSTRAINT IF EXISTS transactions_type_check,
   DROP CONSTRAINT IF EXISTS transactions_note_check,
   ADD CONSTRAINT transactions_type_check CHECK (type IN ('income', 'expense')),
@@ -103,3 +133,5 @@ VALUES
   ('00000000-0000-0000-0000-000000000104', NULL, 'Gift', 'gift', '#66BB6A', 'income', 'active', 'system'),
   ('00000000-0000-0000-0000-000000000105', NULL, 'Other', 'other', '#81C784', 'income', 'active', 'system')
 ON CONFLICT DO NOTHING;
+
+COMMIT;

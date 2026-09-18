@@ -41,4 +41,15 @@ Commit pending after corrective verification.
 
 - Neon had zero existing transaction rows, so backfill was structurally verified but had no live rows to inspect.
 - Direct `dart compile exe routes/index.dart` is not valid for Dart Frog route source because it has no `main`; `dart_frog build` is required.
+
+## Review correction follow-up
+
+- Moved migration 009 preflight before schema constraints and added an explicit
+  UTC date conversion branch for legacy `timestamp without time zone` columns.
+- Kept migration 009 runnable from migrations 001–008; added transaction scope
+  and UTC session setting.
+- Made migration 010 date conversion conditional on legacy column type, so
+  reruns after 009 do not recast or conflict with existing constraints.
+- Updated sequencing docs and migration contract tests.
+- Applied and reran migrations 009 and 010 on Neon successfully.
 - Working-tree edits in Bruno/local environment plus existing phase design/plan files remain untouched and unstaged.

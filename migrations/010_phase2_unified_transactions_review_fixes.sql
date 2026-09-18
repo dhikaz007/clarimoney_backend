@@ -16,10 +16,21 @@ BEGIN
   END IF;
 END $$;
 
--- Preserve legacy timestamp wall-clock values as UTC, regardless of session timezone.
-ALTER TABLE transactions
-  ALTER COLUMN date TYPE TIMESTAMPTZ
-  USING (date AT TIME ZONE 'UTC');
+-- Preserve legacy timestamp wall-clock values as UTC. Skip recast after 009.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'transactions'
+      AND column_name = 'date'
+      AND data_type = 'timestamp without time zone'
+  ) THEN
+    ALTER TABLE transactions
+      ALTER COLUMN date TYPE TIMESTAMPTZ
+      USING (date AT TIME ZONE 'UTC');
+  END IF;
+END $$;
 
 CREATE OR REPLACE FUNCTION prevent_category_identity_mutation()
 RETURNS TRIGGER

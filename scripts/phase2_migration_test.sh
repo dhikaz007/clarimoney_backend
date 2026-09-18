@@ -11,6 +11,14 @@ sql=$(tr '[:upper:]' '[:lower:]' <"$migration")
 corrective_sql=$(tr '[:upper:]' '[:lower:]' <"$corrective")
 
 for required in \
+  "raise exception 'migration 009 preflight failed" \
+  "amount is null or amount <= 0" \
+  "char_length(btrim(name))" \
+  "using (date at time zone 'utc')"; do
+  [[ "$sql" == *"$required"* ]] || { printf 'missing migration 009 sequencing: %s\n' "$required" >&2; exit 1; }
+done
+
+for required in \
   "alter table transactions" \
   "add column if not exists type" \
   "set default 'expense'" \
@@ -32,6 +40,8 @@ for required in \
   "char_length(btrim(name))" \
   "raise exception 'migration 009 preflight failed" \
   "at time zone 'utc'" \
+  "information_schema.columns" \
+  "timestamp without time zone" \
   "categories_identity_mutation_guard" \
   "on conflict (id) do update set" \
   "salary" "bonus" "freelance" "gift" "other" \
