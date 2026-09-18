@@ -25,3 +25,14 @@ Commit: `0afdcff` (`feat: add auth token and email foundation`).
 Concerns:
 - Full test run without `JWT_SECRET` fails two pre-existing JWT tests by design. Secret-injected run passes.
 - SMTP sends require all documented variables, including `APP_BASE_URL`.
+
+## Follow-up findings fixed
+
+- Applied migration 007 to configured Neon using repository `.env` in a subprocess;
+  secrets were not printed or committed.
+- Added standalone `token_hash` index.
+- Added Neon-backed `AuthTokenService` tests for hash-only persistence, success, expiry,
+  used-token rejection, wrong-purpose rejection, and concurrent consumption.
+- Strengthened SMTP tests for every missing configuration key and invalid port.
+- Re-ran with repository `.env`: `dart test` passed 51 tests; `dart analyze` passed with
+  5 pre-existing info diagnostics; `dart_frog build` passed.

@@ -4,13 +4,46 @@ import 'package:mailer/smtp_server.dart';
 import 'package:test/test.dart';
 
 void main() {
-  test('rejects missing SMTP configuration', () async {
+  test('rejects each missing SMTP configuration value', () async {
+    const complete = {
+      'APP_BASE_URL': 'https://app.example.com',
+      'SMTP_HOST': 'smtp.example.com',
+      'SMTP_PORT': '587',
+      'SMTP_USERNAME': 'sender@example.com',
+      'SMTP_PASSWORD': 'app-password',
+      'SMTP_FROM': 'sender@example.com',
+    };
+    for (final key in complete.keys) {
+      var sends = 0;
+      final environment = {...complete}..remove(key);
+      expect(
+        () => EmailService(
+          environment: environment,
+          sender: (_, _) async => sends++,
+        ).sendVerification(email: 'user@example.com', token: 'token'),
+        throwsA(isA<EmailConfigurationException>()),
+      );
+      expect(sends, 0);
+    }
+  });
+
+  test('rejects invalid SMTP port before sending', () async {
+    var sends = 0;
     expect(
       () => EmailService(
-        environment: const {},
+        environment: const {
+          'APP_BASE_URL': 'https://app.example.com',
+          'SMTP_HOST': 'smtp.example.com',
+          'SMTP_PORT': 'not-a-port',
+          'SMTP_USERNAME': 'sender@example.com',
+          'SMTP_PASSWORD': 'app-password',
+          'SMTP_FROM': 'sender@example.com',
+        },
+        sender: (_, _) async => sends++,
       ).sendVerification(email: 'user@example.com', token: 'token'),
       throwsA(isA<EmailConfigurationException>()),
     );
+    expect(sends, 0);
   });
 
   test('builds verification message from configured values', () async {
