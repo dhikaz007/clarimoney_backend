@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:postgres/postgres.dart';
 import 'package:clarimoney_backend/src/api_response.dart';
+import 'package:clarimoney_backend/src/summary_calculation.dart';
 
 FutureOr<Response> onRequest(RequestContext context) async {
   if (context.request.method != HttpMethod.get) {
@@ -17,11 +18,11 @@ FutureOr<Response> onRequest(RequestContext context) async {
   final period = context.request.uri.queryParameters['period'] ?? 'this_month';
   final now = DateTime.now().toUtc();
   final start = period == 'previous_month'
-      ? DateTime(now.year, now.month - 1).toUtc()
-      : DateTime(now.year, now.month).toUtc();
+      ? DateTime.utc(now.year, now.month - 1)
+      : DateTime.utc(now.year, now.month);
   final end = period == 'previous_month'
-      ? DateTime(now.year, now.month).toUtc()
-      : DateTime(now.year, now.month + 1).toUtc();
+      ? DateTime.utc(now.year, now.month)
+      : DateTime.utc(now.year, now.month + 1);
 
   if (period != 'this_month' && period != 'previous_month') {
     return apiResponse(
@@ -36,19 +37,18 @@ FutureOr<Response> onRequest(RequestContext context) async {
         SELECT c.id, c.name, c.color, c.icon, SUM(t.amount) as total
         FROM transactions t
         JOIN categories c ON t.category_id = c.id
-        WHERE t.user_id = @userId AND t.date >= @start AND t.date < @end
+        WHERE t.user_id = @userId AND t.type = 'expense'
+          AND t.date >= @start AND t.date < @end
         GROUP BY c.id
-        ORDER BY total DESC
+        ORDER BY total DESC, c.id ASC
       '''),
       parameters: {'userId': userId, 'start': start, 'end': end},
     );
 
-    double grandTotal = 0;
     final items = <Map<String, dynamic>>[];
 
     for (final row in result) {
-      final total = (row[4] as num?)?.toDouble() ?? 0;
-      grandTotal += total;
+      final total = row[4] as num;
       items.add({
         'category_id': row[0],
         'name': row[1],
@@ -58,19 +58,32 @@ FutureOr<Response> onRequest(RequestContext context) async {
       });
     }
 
-    for (final item in items) {
-      final total = item['total'] as double;
-      item['percentage'] = grandTotal > 0 ? total / grandTotal * 100 : 0;
-    }
+    final totals = await pool.execute(
+      Sql.named('''
+        SELECT
+          SUM(t.amount) FILTER (WHERE t.type = 'income'),
+          SUM(t.amount) FILTER (WHERE t.type = 'expense'),
+          COUNT(*) FILTER (WHERE t.type = 'income')
+        FROM transactions t
+        WHERE t.user_id = @userId AND t.date >= @start AND t.date < @end
+      '''),
+      parameters: {'userId': userId, 'start': start, 'end': end},
+    );
+    final totalRow = totals.first;
+    final summaryData = buildSummaryData(
+      income: totalRow[0] as num?,
+      expense: totalRow[1] as num?,
+      incomeCount: (totalRow[2] as int?) ?? 0,
+      items: items,
+    );
 
     return apiResponse(
       statusCode: HttpStatus.ok,
       message: 'Summary fetched successfully',
       data: {
-        'total_expense': grandTotal,
+        ...summaryData,
         'period': period,
         'summary': items,
-        'largest_category': items.isNotEmpty ? items.first : null,
       },
     );
   } catch (e) {

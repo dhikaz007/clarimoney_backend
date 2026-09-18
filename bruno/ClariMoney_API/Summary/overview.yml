@@ -20,6 +20,11 @@ runtime:
         test("Has total_expense", () => {
           expect(res.body.data).to.have.property("total_expense");
         });
+        test("Has income and net cash flow fields", () => {
+          expect(res.body.data).to.have.property("total_income");
+          expect(res.body.data).to.have.property("net_cash_flow_available");
+          expect(res.body.data).to.have.property("net_cash_flow");
+        });
         
 examples:
   - name: Success
@@ -31,7 +36,10 @@ examples:
         "status_code": 200,
         "message": "Summary fetched successfully",
         "data": {
+          "total_income": 500000,
           "total_expense": 250000,
+          "net_cash_flow_available": true,
+          "net_cash_flow": 250000,
           "period": "this_month",
           "summary": [
             {
@@ -87,7 +95,10 @@ examples:
         "status_code": 200,
         "message": "Summary fetched successfully",
         "data": {
+          "total_income": 0,
           "total_expense": 0,
+          "net_cash_flow_available": false,
+          "net_cash_flow": null,
           "period": "this_month",
           "summary": [],
           "largest_category": null

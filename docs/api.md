@@ -89,6 +89,15 @@ Create/update body:
 category name. Filters combine with AND. Results order by date, created time,
 then ID descending.
 
+## Summary API
+
+`GET /api/v1/summary/overview?period=this_month` uses half-open UTC month
+boundaries. Response includes `total_income`, `total_expense`,
+`net_cash_flow_available`, and nullable `net_cash_flow`. Net cash flow is
+unavailable for empty or expense-only periods. `summary` and
+`largest_category` contain expense categories only; income-only responses use
+an empty breakdown and `largest_category: null`.
+
 ## Category lifecycle
 
 - `GET /api/v1/categories`
