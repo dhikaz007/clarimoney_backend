@@ -85,7 +85,7 @@ Future<Map<String, dynamic>> fetchComparison({
       WHERE t.user_id = @userId
         AND ((t.date >= @currentStart AND t.date < @currentEnd)
           OR (t.date >= @previousStart AND t.date < @previousEnd))
-        AND (@categoryId IS NULL OR t.category_id = @categoryId)
+        AND (CAST(@categoryId AS uuid) IS NULL OR t.category_id = @categoryId)
     '''),
     parameters: parameters,
   );
@@ -101,7 +101,7 @@ Future<Map<String, dynamic>> fetchComparison({
         AND ((t.date >= @currentStart AND t.date < @currentEnd)
           OR (t.date >= @previousStart AND t.date < @previousEnd))
       WHERE (c.user_id = @userId OR c.user_id IS NULL)
-        AND (@categoryId IS NULL OR c.id = @categoryId)
+        AND (CAST(@categoryId AS uuid) IS NULL OR c.id = @categoryId)
         ${includeEmptyCategories ? '' : 'AND (t.id IS NOT NULL)'}
       GROUP BY c.id, c.name
       ORDER BY c.id ASC

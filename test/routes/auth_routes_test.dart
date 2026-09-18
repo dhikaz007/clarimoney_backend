@@ -22,6 +22,8 @@ import '../../routes/api/v1/auth/sessions/[id].dart' as session_id;
 import '../../routes/api/v1/auth/sessions/_middleware.dart'
     as sessions_middleware;
 import '../../routes/api/v1/auth/register.dart' as register;
+import '../support/test_database.dart';
+import '../support/test_database.dart';
 
 class _MockAuthRequestContext extends Mock implements RequestContext {}
 
@@ -641,17 +643,7 @@ RequestContext _requestWithPool(
 ) => _withPool(request, pool);
 
 Pool<dynamic> _pool() {
-  final url = Uri.parse(Platform.environment['DATABASE_URL']!);
-  return Pool<dynamic>.withUrl(
-    url
-        .replace(
-          queryParameters: {
-            for (final entry in url.queryParameters.entries)
-              if (entry.key != 'channel_binding') entry.key: entry.value,
-          },
-        )
-        .toString(),
-  );
+  return testPool();
 }
 
 bool get _skipDbTest =>

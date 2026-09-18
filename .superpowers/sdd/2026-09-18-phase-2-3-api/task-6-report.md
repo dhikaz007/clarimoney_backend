@@ -2,9 +2,8 @@
 
 ## Status
 
-Neon migration and verifier passed. Zero-skip release tests remain blocked by
-existing `postgres` driver incompatibility with `.env` `channel_binding`, plus
-existing DB assertions expecting numeric values instead of driver strings.
+Neon migration and verifier passed. Shared focused-test DB helper now strips
+unsupported `channel_binding` without changing production `.env`.
 
 ## Finalized artifacts
 
@@ -19,6 +18,7 @@ existing DB assertions expecting numeric values instead of driver strings.
 - Extended `scripts/verify_release.sh` to apply migrations 009/010, remove
   unsupported `channel_binding`, run verifier, and fail skipped tests.
 - Normalized PostgreSQL numeric aggregates in summary route.
+- Added `test/support/test_database.dart`; focused Phase 2/3 fixtures use it.
 
 ## Verification evidence
 
@@ -26,9 +26,10 @@ existing DB assertions expecting numeric values instead of driver strings.
 - `./scripts/verify_release_test.sh` — passed; skip parser rejects compact and
   spaced skip markers.
 - Safe `.env` release run — migrations 009/010 applied; verifier passed; tests
-  ran with zero skips but failed existing DB assertions after connection
-  normalization. Failures include numeric string expectations and comparison
-  route 500.
+  ran with zero skips. Focused comparison, summary, and auth tests: 34 passed,
+  1 failed. Remaining failure: existing UTC-boundary summary assertion expects
+  `2`, Neon result is `3`; needs product/test-period decision, not connection
+  handling.
 - `dart analyze` — passed; no diagnostics.
 - `dart_frog build` — passed; existing rogue-route warning remains for
   `routes/api/v1/categories/[id].dart`.

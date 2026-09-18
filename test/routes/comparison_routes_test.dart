@@ -11,6 +11,7 @@ import '../../routes/api/v1/categories/[id]/comparison.dart' as category_route;
 import '../../routes/api/v1/summary/comparison/index.dart' as overview_route;
 import '../../routes/api/v1/summary/comparison/categories.dart'
     as categories_route;
+import '../support/test_database.dart';
 
 void main() {
   test('comparison rejects invalid period before database access', () async {
@@ -115,7 +116,7 @@ class _Fixture {
   final String categoryId;
 
   static Future<_Fixture> create() async {
-    final pool = Pool<dynamic>.withUrl(Platform.environment['DATABASE_URL']!);
+    final pool = testPool();
     final userId = const Uuid().v4();
     final categoryId = const Uuid().v4();
     await pool.execute(

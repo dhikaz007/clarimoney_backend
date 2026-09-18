@@ -93,6 +93,11 @@ FutureOr<Response> onRequest(RequestContext context) async {
   }
 }
 
-num _numeric(Object? value) => value is num ? value : num.parse(value.toString());
+num _numeric(Object? value) {
+  final number = value is num ? value : num.parse(value.toString());
+  return number is double && number.isFinite && number == number.truncateToDouble()
+      ? number.toInt()
+      : number;
+}
 
 num? _numericOrNull(Object? value) => value == null ? null : _numeric(value);

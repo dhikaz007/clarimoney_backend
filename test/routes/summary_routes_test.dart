@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../routes/api/v1/summary/overview.dart' as summary_route;
 import '../../routes/api/v1/transactions/index.dart' as transactions;
+import '../support/test_database.dart';
 
 void main() {
   test('summary returns all fields for empty period', () async {
@@ -130,7 +131,7 @@ void main() {
         parameters: {'id': fixture.userId},
       );
       expect(rows.single[0], 'expense');
-      expect(rows.single[1], 12.34);
+      expect(num.parse(rows.single[1].toString()), 12.34);
     } finally {
       await fixture.close();
     }
@@ -223,7 +224,7 @@ class _Fixture {
 }
 
 Pool<dynamic> _pool() =>
-    Pool<dynamic>.withUrl(Platform.environment['DATABASE_URL']!);
+    testPool();
 
 bool get _skipDbTest =>
     Platform.environment['DATABASE_URL'] == null ||
