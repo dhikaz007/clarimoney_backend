@@ -30,7 +30,7 @@ if [[ "$release_host" == *neon.tech || "$release_host" == *onrender.com || "$rel
   printf '%s\n' 'Release verification refused: production-like host requires RELEASE_VERIFY_DISPOSABLE=true.' >&2
   exit 1
 fi
-DATABASE_URL="$RELEASE_VERIFY_DATABASE_URL"
+export DATABASE_URL="$RELEASE_VERIFY_DATABASE_URL"
 : "${JWT_SECRET:?JWT_SECRET is required}"
 if [[ "$DATABASE_URL" == *'channel_binding='* ]]; then
   DATABASE_URL="$(python3 - "$DATABASE_URL" <<'PY'

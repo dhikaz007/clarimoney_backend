@@ -3,7 +3,6 @@ import 'package:test/test.dart';
 import 'package:clarimoney_backend/src/comparison_calculation.dart';
 import 'package:clarimoney_backend/src/comparison_route.dart';
 import 'package:clarimoney_backend/src/transaction_validation.dart';
-import 'package:clarimoney_backend/src/transaction_validation.dart';
 
 void main() {
   test('parses PostgreSQL numeric aggregates safely', () {
