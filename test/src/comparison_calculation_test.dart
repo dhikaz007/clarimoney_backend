@@ -32,9 +32,12 @@ void main() {
     expect(compareValue(current: 10, previous: 0), {
       'value': 10,
       'absolute_change': 10,
+      'percentage_change': null,
     });
     expect(compareValue(current: null, previous: 10), {
+      'value': null,
       'absolute_change': null,
+      'percentage_change': null,
     });
   });
 
@@ -130,6 +133,122 @@ void main() {
     expect(buildComparison(current: current, previous: previous).netCashFlow, {
       'available': false,
       'value': null,
+      'absolute_change': null,
+      'percentage_change': null,
     });
+  });
+
+  test('normalizes local and DST inputs before deriving January rollover', () {
+    final period = deriveComparisonPeriod(
+      start: DateTime.parse('2026-03-01T00:00:00-05:00'),
+      end: DateTime.parse('2026-03-16T00:00:00-04:00'),
+    );
+
+    expect(period.start, DateTime.utc(2026, 2, 1));
+    expect(period.end, DateTime.utc(2026, 2, 16));
+    expect(period.start.isUtc, isTrue);
+    expect(period.end.isUtc, isTrue);
+  });
+
+  test('derives January prior month in previous year', () {
+    final period = deriveComparisonPeriod(
+      start: DateTime.utc(2026, 1, 1),
+      end: DateTime.utc(2026, 2, 1),
+    );
+
+    expect(period.start, DateTime.utc(2025, 12, 1));
+    expect(period.end, DateTime.utc(2026, 1, 1));
+  });
+
+  test('handles short previous month without zero-length period', () {
+    final period = deriveComparisonPeriod(
+      start: DateTime.utc(2026, 3, 31),
+      end: DateTime.utc(2026, 4, 30),
+    );
+
+    expect(period.start, DateTime.utc(2026, 2, 28));
+    expect(period.end.isAfter(period.start), isTrue);
+    expect(period.end, DateTime.utc(2026, 3, 30));
+  });
+
+  test('preserves equivalent elapsed range across month boundary', () {
+    final period = deriveComparisonPeriod(
+      start: DateTime.utc(2026, 1, 20),
+      end: DateTime.utc(2026, 2, 10),
+    );
+
+    expect(period.start, DateTime.utc(2025, 12, 20));
+    expect(period.end, DateTime.utc(2026, 1, 10));
+    expect(period.end.difference(period.start), const Duration(days: 21));
+  });
+
+  test('rejects non-finite comparison values', () {
+    expect(
+      () => compareValue(current: double.nan, previous: 1),
+      throwsArgumentError,
+    );
+    expect(
+      () => compareValue(current: double.infinity, previous: 1),
+      throwsArgumentError,
+    );
+    expect(
+      () => compareValue(current: 1, previous: double.negativeInfinity),
+      throwsArgumentError,
+    );
+  });
+
+  test('uses consistent null keys for unavailable comparison values', () {
+    expect(compareValue(current: null, previous: 1), {
+      'value': null,
+      'absolute_change': null,
+      'percentage_change': null,
+    });
+    expect(compareValue(current: 1, previous: 0), {
+      'value': 1,
+      'absolute_change': 1,
+      'percentage_change': null,
+    });
+  });
+
+  test(
+    'excludes zero changes from drivers and ignores invalid transaction types',
+    () {
+      final current = aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'same',
+          categoryName: 'Same',
+          type: 'expense',
+          amount: 10,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'invalid',
+          categoryName: 'Invalid',
+          type: 'transfer',
+          amount: 100,
+        ),
+      ]);
+      final previous = aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'same',
+          categoryName: 'Same',
+          type: 'expense',
+          amount: 10,
+        ),
+      ]);
+
+      expect(current.expense, 10);
+      expect(current.income, isNull);
+      expect(
+        buildComparison(current: current, previous: previous).drivers,
+        isEmpty,
+      );
+    },
+  );
+
+  test('preserves decimal raw precision without percentage rounding', () {
+    final result = compareValue(current: 1.005, previous: 1.0);
+
+    expect(result['absolute_change'], closeTo(0.005, 0.000000001));
+    expect(result['percentage_change'], closeTo(0.5, 0.000000001));
   });
 }

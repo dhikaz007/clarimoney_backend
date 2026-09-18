@@ -58,23 +58,35 @@ ComparisonPeriod deriveComparisonPeriod({
   required DateTime start,
   required DateTime end,
 }) {
-  final days = end.difference(start).inDays;
-  final previousYear = start.month == 1 ? start.year - 1 : start.year;
-  final previousMonth = start.month == 1 ? 12 : start.month - 1;
-  final previousMonthDays = DateTime.utc(start.year, start.month, 0).day;
+  final startUtc = start.toUtc();
+  final endUtc = end.toUtc();
+  final currentStart = DateTime.utc(
+    startUtc.year,
+    startUtc.month,
+    startUtc.day,
+  );
+  final currentEnd = DateTime.utc(endUtc.year, endUtc.month, endUtc.day);
+  if (!currentEnd.isAfter(currentStart)) {
+    throw ArgumentError('comparison period must be non-empty');
+  }
+  final days = currentEnd.difference(currentStart).inDays;
+  final previousYear = currentStart.month == 1
+      ? currentStart.year - 1
+      : currentStart.year;
+  final previousMonth = currentStart.month == 1 ? 12 : currentStart.month - 1;
+  final previousMonthDays = DateTime.utc(
+    currentStart.year,
+    currentStart.month,
+    0,
+  ).day;
   final previousStart = DateTime.utc(
     previousYear,
     previousMonth,
-    start.day.clamp(1, previousMonthDays),
+    currentStart.day.clamp(1, previousMonthDays),
   );
-  final previousMonthEnd = DateTime.utc(start.year, start.month);
-  final previousEnd = start.day == 1 && end.day == 1
-      ? previousMonthEnd
-      : DateTime.utc(
-          previousStart.year,
-          previousStart.month,
-          (previousStart.day + days).clamp(1, previousMonthDays),
-        );
+  final previousEnd = currentStart.day == 1 && currentEnd.day == 1
+      ? DateTime.utc(previousStart.year, previousStart.month + 1)
+      : previousStart.add(Duration(days: days));
   return ComparisonPeriod(previousStart, previousEnd);
 }
 
@@ -82,10 +94,18 @@ Map<String, dynamic> compareValue({
   required num? current,
   required num? previous,
 }) {
-  final result = <String, dynamic>{};
-  if (current != null) result['value'] = current;
+  // Precision policy: preserve raw numeric arithmetic; do not round values or percentages.
+  for (final value in [current, previous]) {
+    if (value != null && !value.isFinite) {
+      throw ArgumentError('comparison values must be finite');
+    }
+  }
+  final result = <String, dynamic>{
+    'value': current,
+    'absolute_change': null,
+    'percentage_change': null,
+  };
   if (current == null || previous == null) {
-    result['absolute_change'] = null;
     return result;
   }
   final change = current - previous;
@@ -99,10 +119,15 @@ PeriodTotals aggregatePeriod(Iterable<ComparisonTransaction> transactions) {
   num? expense;
   final categories = <String, CategoryTotal>{};
   for (final transaction in transactions) {
+    if (!transaction.amount.isFinite) {
+      throw ArgumentError('transaction amounts must be finite');
+    }
     if (transaction.type == 'income') {
       income = (income ?? 0) + transaction.amount;
-    } else {
+    } else if (transaction.type == 'expense') {
       expense = (expense ?? 0) + transaction.amount;
+    } else {
+      continue;
     }
     final category = categories[transaction.categoryId];
     categories[transaction.categoryId] = CategoryTotal(
@@ -149,7 +174,7 @@ ComparisonResult buildComparison({
               '_magnitude': change?.abs() ?? -1,
             };
           })
-          .where((item) => item['_magnitude'] >= 0)
+          .where((item) => item['_magnitude'] > 0)
           .toList()
         ..sort((a, b) {
           final magnitude = (b['_magnitude'] as num).compareTo(
@@ -176,9 +201,7 @@ ComparisonResult buildComparison({
     expense: compareValue(current: current.expense, previous: previous.expense),
     netCashFlow: {
       'available': netCurrent != null && netPrevious != null,
-      if (netCurrent != null && netPrevious != null)
-        ...compareValue(current: netCurrent, previous: netPrevious),
-      if (netCurrent == null || netPrevious == null) 'value': null,
+      ...compareValue(current: netCurrent, previous: netPrevious),
     },
     categories: categories,
     drivers: drivers.take(3).toList(),

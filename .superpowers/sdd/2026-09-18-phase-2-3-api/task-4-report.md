@@ -1,6 +1,6 @@
 # Task 4 report: Phase 3 comparison engine
 
-Status: complete.
+Status: complete; review findings fixed.
 
 Implemented pure comparison helpers in `lib/src/comparison_calculation.dart`:
 
@@ -11,12 +11,17 @@ Implemented pure comparison helpers in `lib/src/comparison_calculation.dart`:
 - Net cash flow availability semantics.
 - Category aggregation by persistent `category_id`, preserving renamed/archived identity.
 - Deterministic maximum-three change drivers ranked by absolute change magnitude.
+- UTC-normalized period math, including January rollover, short prior months, DST inputs, and cross-month ranges.
+- Non-finite values rejected; unknown transaction types ignored.
+- Stable comparison keys always emit `value`, `absolute_change`, and `percentage_change`.
+- Zero-change categories excluded from drivers.
+- Precision policy: preserve raw numeric arithmetic; no rounding of values or percentages.
 
-Tests added: `test/src/comparison_calculation_test.dart`.
+Tests added: `test/src/comparison_calculation_test.dart`, including review edge cases for rollover, DST, month lengths, cross-month ranges, non-finite values, invalid types, zero drivers, unavailable NCF, and decimals.
 
 Verification:
 
-- Focused comparison tests: passed, 6 tests.
+- Focused comparison tests: passed, 15 tests.
 - `dart analyze`: passed.
 - `dart_frog build`: passed.
 - `dart test`: comparison tests passed; 2 existing JWT tests failed because local `JWT_SECRET` is absent or shorter than required 32 characters. No comparison failures.
