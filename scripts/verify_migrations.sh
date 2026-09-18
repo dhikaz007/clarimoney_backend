@@ -7,6 +7,10 @@ DO $$
 DECLARE
   constraint_def text;
 BEGIN
+  IF to_regclass('public.auth_tokens') IS NULL THEN
+    RAISE EXCEPTION 'public.auth_tokens table is missing; apply migrations 007 and 008';
+  END IF;
+
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'users'
@@ -55,6 +59,10 @@ BEGIN
   IF to_regclass('public.idx_auth_tokens_user_purpose') IS NULL
      OR to_regclass('public.idx_auth_tokens_expiry') IS NULL THEN
     RAISE EXCEPTION 'required auth_tokens indexes are missing';
+  END IF;
+
+  IF to_regclass('public.idx_auth_tokens_hash') IS NOT NULL THEN
+    RAISE EXCEPTION 'legacy idx_auth_tokens_hash remains; apply migration 008';
   END IF;
 END $$;
 SQL

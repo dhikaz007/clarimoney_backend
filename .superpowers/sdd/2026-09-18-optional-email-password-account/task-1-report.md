@@ -32,9 +32,10 @@ Follow-up commit: `98de3e4` (`test: verify auth token persistence and consumptio
 
 - Applied migration 007 to configured Neon using repository `.env` in a subprocess;
   secrets were not printed or committed.
-- Added standalone `token_hash` index.
+- Preserved the unique `token_hash` index and added legacy-index cleanup in
+  migration 008.
 - Added Neon-backed `AuthTokenService` tests for hash-only persistence, success, expiry,
   used-token rejection, wrong-purpose rejection, and concurrent consumption.
 - Strengthened SMTP tests for every missing configuration key and invalid port.
-- Re-ran with repository `.env`: `dart test` passed 51 tests; `dart analyze` passed with
-  5 pre-existing info diagnostics; `dart_frog build` passed.
+- Earlier local run: `dart test` passed 51 tests with database-backed coverage;
+  release-gate result is recorded only in Task 5 report.

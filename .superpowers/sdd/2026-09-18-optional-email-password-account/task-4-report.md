@@ -19,8 +19,9 @@ Status: implemented.
 ## Verification
 
 - Explicit `.env` account test command passed: 3/3 Neon-backed tests.
-- Full Neon suite passed: 77 passed, 0 skipped, using `DATABASE_URL` and
-  `JWT_SECRET` loaded from repository `.env` via:
+- Earlier local verification used `DATABASE_URL` and `JWT_SECRET` loaded from
+  repository `.env`; its result is not the final release-gate result. The
+  command was:
   `python3 -c 'import os, subprocess; env=os.environ.copy(); env.update(dict(line.rstrip().split("=",1) for line in open(".env") if line.strip() and not line.startswith("#"))); raise SystemExit(subprocess.run(["dart","test"], env=env).returncode)'`.
 - `dart analyze`: passed with existing informational lints only.
 - `dart_frog build`: passed.
@@ -45,6 +46,6 @@ Unrelated working-tree edits were not staged. No secrets added.
 - Ran account tests with repository `.env`: 3/3 passed.
 - Explicit environment used `DATABASE_URL` and `JWT_SECRET` from `.env`; no
   secret values recorded.
-- Full Neon suite result: 77 passed, 0 skipped.
+- Final Neon release-gate result is recorded only in Task 5 report.
 - Ran `dart analyze`: completed with existing informational lints only.
 - Ran `dart_frog build`: passed.

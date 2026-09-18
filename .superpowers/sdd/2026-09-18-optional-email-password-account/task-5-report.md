@@ -17,7 +17,9 @@ Status: complete.
 ## Verification
 
 - Bruno YAML parse: passed, 33 files.
-- Neon-backed `dart test`: passed, 77 tests.
+- Explicit Neon release-gate run with repository `.env`: 80 passed, 0 skipped.
+- Local run without complete release environment: database tests skipped; not a
+  release result.
 - `dart analyze`: passed.
 - `dart_frog build`: passed; production build created.
 - `git diff --check`: passed.
