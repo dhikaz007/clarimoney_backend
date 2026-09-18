@@ -304,6 +304,39 @@ void main() {
     }
   }, skip: _skipDbTest);
 
+  test('sender failure cannot observe or leave active token', () async {
+    final pool = _pool();
+    final observer = _pool();
+    final userId = const Uuid().v4();
+    final sessionId = const Uuid().v4();
+    try {
+      await _insertUser(pool, userId);
+      await _insertSession(pool, userId, sessionId);
+      final request = TestRequestContext(
+        path: '/api/v1/auth/resend-verification',
+        method: HttpMethod.post,
+      );
+      request.provide<AuthSession>(AuthSession(userId, sessionId));
+      request.provide<EmailService>(
+        EmailService(
+          environment: _mailEnvironment,
+          sender: (_, __) async {
+            final visible = await _validVerificationTokens(observer, userId);
+            expect(visible, isEmpty);
+            throw StateError('SMTP down');
+          },
+        ),
+      );
+      final response = await resend.onRequest(_withPool(request, pool));
+      expect(response.statusCode, HttpStatus.internalServerError);
+      expect(await _validVerificationTokens(observer, userId), isEmpty);
+    } finally {
+      await _deleteUser(pool, userId);
+      await observer.close();
+      await pool.close();
+    }
+  }, skip: _skipDbTest);
+
   test('invalid SMTP configuration issues no verification token', () async {
     final pool = _pool();
     final userId = const Uuid().v4();

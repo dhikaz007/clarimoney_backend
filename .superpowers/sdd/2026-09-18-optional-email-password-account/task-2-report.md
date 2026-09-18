@@ -32,19 +32,19 @@ Review follow-up:
 
 - Resend now locks user row and atomically invalidates prior tokens plus issues one new token.
 - Concurrent resends leave one valid token.
-- Email delivery runs after token transaction commit. Delivery failure marks newly issued token used, leaving no valid token until next resend.
+- Email delivery runs inside token transaction before commit. Delivery failure rolls back invalidation and issuance, leaving no new active token.
 - Resend accepts injectable `EmailService`; tests use fake successful and failing senders.
 - Added login-before-verification, successful resend, SMTP failure, concurrent resend, invalid token, and middleware ownership tests.
 - Expanded API docs for profile, resend, verify, SMTP requirements, and failure behavior.
 - SMTP configuration is validated before transaction issuance; invalid config leaves no active token.
-- Delivery-failure cleanup catches and logs cleanup error type only; raw token and SMTP details never enter logs.
+- No post-send cleanup path remains; transaction rollback handles sender failure. Raw token and SMTP details never enter logs.
 - Invalid-token test now closes its DB pool in `finally`.
 
 Commits:
 
 - `a72b612 feat: add optional email verification routes`
 - `96cb6e1 fix: close email verification review findings`
-- Pending review-fix commit: SMTP preflight and cleanup handling.
+- Pending final review-fix commit: fail-closed resend transaction.
 
 Concerns:
 

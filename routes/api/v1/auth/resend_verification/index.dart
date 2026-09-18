@@ -4,7 +4,6 @@ import 'package:clarimoney_backend/src/api_response.dart';
 import 'package:clarimoney_backend/src/auth_middleware.dart';
 import 'package:clarimoney_backend/src/services/auth_token_service.dart';
 import 'package:clarimoney_backend/src/services/email_service.dart';
-import 'package:clarimoney_backend/src/utils/auth_token_utils.dart';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:postgres/postgres.dart';
 
@@ -20,8 +19,6 @@ Future<Response> onRequest(RequestContext context) async {
     final pool = context.read<Pool<dynamic>>();
     final emailService = _emailService(context);
     emailService.validateConfiguration();
-    AuthTokenIssue? issued;
-    String? email;
     await pool.runTx((transaction) async {
       final rows = await transaction.execute(
         Sql.named('''SELECT email, email_verified_at FROM users
@@ -30,42 +27,23 @@ Future<Response> onRequest(RequestContext context) async {
       );
       if (rows.isEmpty) throw _InvalidUserException();
       if (rows.first[1] != null) return;
-      email = rows.first[0] as String;
       await transaction.execute(
         Sql.named('''UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP
           WHERE user_id = @user_id AND purpose = 'email_verification'
             AND used_at IS NULL'''),
         parameters: {'user_id': userId},
       );
-      issued = await AuthTokenService(pool).issueInTransaction(
+      final issued = await AuthTokenService(pool).issueInTransaction(
         transaction,
         userId,
         'email_verification',
         const Duration(hours: 24),
       );
+      await emailService.sendVerification(
+        email: rows.first[0] as String,
+        token: issued.token,
+      );
     });
-    if (issued != null) {
-      try {
-        await emailService.sendVerification(
-          email: email!,
-          token: issued!.token,
-        );
-      } on Object {
-        try {
-          await pool.execute(
-            Sql.named('''UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP
-              WHERE token_hash = @hash AND used_at IS NULL'''),
-            parameters: {'hash': AuthTokenUtils.hash(issued!.token)},
-          );
-        } catch (cleanupError) {
-          stderr.writeln(
-            'Verification token cleanup failed after email delivery failure: '
-            '${cleanupError.runtimeType}',
-          );
-        }
-        rethrow;
-      }
-    }
     return apiResponse(
       statusCode: HttpStatus.ok,
       message: 'If email is unverified, verification instructions were sent',
