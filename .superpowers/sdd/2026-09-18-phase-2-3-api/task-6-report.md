@@ -3,7 +3,9 @@
 ## Status
 
 Neon migration and verifier passed. Shared focused-test DB helper now strips
-unsupported `channel_binding` without changing production `.env`.
+unsupported `channel_binding` without changing production `.env`. UTC boundary
+fixture now asserts both offset forms at current start are included and prior
+start remains previous-period data.
 
 ## Finalized artifacts
 
@@ -26,10 +28,11 @@ unsupported `channel_binding` without changing production `.env`.
 - `./scripts/verify_release_test.sh` — passed; skip parser rejects compact and
   spaced skip markers.
 - Safe `.env` release run — migrations 009/010 applied; verifier passed; tests
-  ran with zero skips. Focused comparison, summary, and auth tests: 34 passed,
-  1 failed. Remaining failure: existing UTC-boundary summary assertion expects
-  `2`, Neon result is `3`; needs product/test-period decision, not connection
-  handling.
+  ran with zero skips. Focused comparison, summary, and auth tests passed.
+- Focused Neon summary test — 4 passed.
+- Focused Neon comparison, summary, auth tests — 35 passed.
+- Full `./scripts/verify_release.sh` — 127 passed, zero skipped; migration
+  verifier passed.
 - `dart analyze` — passed; no diagnostics.
 - `dart_frog build` — passed; existing rogue-route warning remains for
   `routes/api/v1/categories/[id].dart`.

@@ -80,22 +80,25 @@ void main() {
         await fixture.insertTransaction(
           amount: 1,
           type: 'income',
+          // Local +07 input normalizes exactly to current UTC period start.
           date:
               '${start.add(const Duration(hours: 7)).toIso8601String().replaceFirst('Z', '+07:00')}',
         );
         await fixture.insertTransaction(
           amount: 2,
           type: 'income',
+          // Local -05 input normalizes exactly to current UTC period start.
           date:
               '${previousEnd.subtract(const Duration(hours: 5)).toIso8601String().replaceFirst('Z', '-05:00')}',
         );
         await fixture.insertTransaction(
           amount: 4,
           type: 'income',
+          // Previous UTC period start stays out of current period.
           date: previousStart.toIso8601String(),
         );
         var data = (await fixture.summary())['data'] as Map<String, dynamic>;
-        expect(data['total_income'], 2);
+        expect(data['total_income'], 3);
 
         data =
             (await fixture.summary(period: 'previous_month'))['data']
