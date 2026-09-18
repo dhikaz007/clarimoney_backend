@@ -37,6 +37,7 @@ Future<Response> onRequest(RequestContext context) async {
         if (users.isEmpty ||
             users.first[0] is! String ||
             users.first[1] is! String) {
+          await emailService.preflight();
           return;
         }
         final userId = users.first[0] as String;

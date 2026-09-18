@@ -35,7 +35,8 @@ Future<Response> onRequest(RequestContext context) async {
       if (updated.affectedRows != 1) return false;
       final consumed = await transaction.execute(
         Sql.named('''UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP
-          WHERE token_hash = @hash AND used_at IS NULL'''),
+          WHERE token_hash = @hash AND purpose = 'email_verification'
+            AND used_at IS NULL'''),
         parameters: {'hash': AuthTokenUtils.hash(token)},
       );
       return consumed.affectedRows == 1;

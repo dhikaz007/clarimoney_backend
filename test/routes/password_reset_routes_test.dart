@@ -235,6 +235,7 @@ Future<Response> _forgot(
   Pool<dynamic> pool,
   String email, {
   MailSender? sender,
+  MailPreflight? preflight,
 }) {
   final request = TestRequestContext(
     path: '/api/v1/auth/forgot-password',
@@ -245,6 +246,7 @@ Future<Response> _forgot(
     EmailService(
       environment: _mailEnvironment,
       sender: sender ?? (_, __) async {},
+      preflight: preflight ?? (_) async {},
     ),
   );
   request.provide<Pool<dynamic>>(pool);
@@ -283,7 +285,9 @@ Pool<dynamic> _pool() => Pool<dynamic>.withUrl(
       .toString(),
 );
 
-bool get _skipDbTest => Platform.environment['DATABASE_URL'] == null;
+bool get _skipDbTest =>
+    Platform.environment['DATABASE_URL'] == null ||
+    Platform.environment['JWT_SECRET'] == null;
 
 Future<void> _insertUser(Pool<dynamic> pool, String userId, {String? email}) =>
     pool.execute(

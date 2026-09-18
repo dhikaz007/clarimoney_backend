@@ -10,7 +10,6 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/004_user_sessions.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/005_refresh_token_history.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/006_session_id_rotation.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/007_auth_tokens_email_verification.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/008_drop_redundant_auth_token_hash_index.sql
 ```
 
 Production uses `DATABASE_URL`; never commit credentials.
@@ -21,11 +20,6 @@ email verification state plus one-time hashed auth tokens. Apply migrations in
 numeric order against each Neon database; inspect partially migrated databases
 before retrying.
 
-Migration 008 must run after migration 007. It safely removes the redundant
-`idx_auth_tokens_hash` index from databases where migration 007 created it;
-the unique constraint on `auth_tokens.token_hash` preserves required lookup
-indexing. `DROP INDEX IF EXISTS` makes it safe for databases already corrected.
-
 Verify release schema state:
 
 ```bash
@@ -35,12 +29,11 @@ SELECT 1 FROM information_schema.columns WHERE table_schema = 'public'
   AND table_name = 'users' AND column_name = 'email_verified_at';
 SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
   AND tablename = 'auth_tokens' AND indexname = 'auth_tokens_token_hash_key';
-SELECT to_regclass('public.idx_auth_tokens_hash') AS removed_redundant_index;
 SQL
 ```
 
-Expected: `auth_tokens` exists, required checks return `1`, and
-`removed_redundant_index` is empty. Check does not repair schema drift.
+Expected: `auth_tokens` exists and required checks return `1`. Check does not
+repair schema drift.
 
 ## Release environment
 

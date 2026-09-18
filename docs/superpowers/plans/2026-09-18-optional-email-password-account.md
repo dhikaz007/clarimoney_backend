@@ -43,15 +43,15 @@
 - `AuthTokenService.issue(userId, purpose, lifetime)` returns raw token plus expiry while persisting only hash.
 - `AuthTokenService.consume(token, purpose)` atomically returns user ID or null.
 
-- [ ] Add `mailer` dependency without adding another token/hash dependency.
-- [ ] Create `email_verified_at` on `users`.
-- [ ] Create `auth_tokens` with UUID, user FK cascade, unique hash, purpose constraint, expiry, used timestamp, created timestamp, and indexes.
-- [ ] Read `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM` only from environment.
-- [ ] Use Gmail SMTP defaults only when explicitly configured; missing values produce controlled errors.
-- [ ] Build links from `APP_BASE_URL`, never log raw tokens.
-- [ ] Test token uniqueness/hash, missing SMTP configuration, and email service message construction.
-- [ ] Apply migration 007 to Neon.
-- [ ] Document `.env` values and Google App Password setup.
+- [x] Add `mailer` dependency without adding another token/hash dependency.
+- [x] Create `email_verified_at` on `users`.
+- [x] Create `auth_tokens` with UUID, user FK cascade, unique hash, purpose constraint, expiry, used timestamp, created timestamp, and indexes.
+- [x] Read `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM` only from environment.
+- [x] Use Gmail SMTP defaults only when explicitly configured; missing values produce controlled errors.
+- [x] Build links from `APP_BASE_URL`, never log raw tokens.
+- [x] Test token uniqueness/hash, missing SMTP configuration, and email service message construction.
+- [x] Apply migration 007 to Neon.
+- [x] Document `.env` values and Google App Password setup.
 
 ### Task 2: Optional email verification and profile endpoint
 
@@ -69,12 +69,12 @@
 - `POST /api/v1/auth/resend-verification` requires Bearer access token and returns generic success.
 - `POST /api/v1/auth/verify-email` accepts `{ "token": "..." }` publicly.
 
-- [ ] Add `email_verified_at` to register response/profile state without blocking registration.
-- [ ] Resend invalidates prior unused verification tokens, issues 24-hour token, sends email.
-- [ ] Already verified resend returns success without sending mail.
-- [ ] Verify consumes one token atomically and marks user verified.
-- [ ] Invalid, expired, or reused token returns generic `400`.
-- [ ] Test registration before verification, profile state, resend invalidation, success, expiry, and reuse.
+- [x] Add `email_verified_at` to register response/profile state without blocking registration.
+- [x] Resend invalidates prior unused verification tokens, issues 24-hour token, sends email.
+- [x] Already verified resend returns success without sending mail.
+- [x] Verify consumes one token atomically and marks user verified.
+- [x] Invalid, expired, or reused token returns generic `400`.
+- [x] Test registration before verification, profile state, resend invalidation, success, expiry, and reuse.
 
 ### Task 3: Forgot/reset password
 
@@ -89,12 +89,12 @@
 - `POST /api/v1/auth/forgot-password` accepts `{ "email": "..." }` and always returns same success response.
 - `POST /api/v1/auth/reset-password` accepts `{ "token": "...", "password": "..." }`.
 
-- [ ] Normalize email before lookup.
-- [ ] Issue 30-minute reset token only for existing user; send no distinguishing response.
-- [ ] Consume token once; reject invalid, expired, reused, or weak-password requests generically.
-- [ ] Update password hash inside transaction.
-- [ ] Increment `users.token_version` and revoke all `user_sessions` after successful reset.
-- [ ] Test identical forgot responses for existing/non-existing email, success, expiry, reuse, weak password, and session revocation.
+- [x] Normalize email before lookup.
+- [x] Issue 30-minute reset token only for existing user; send no distinguishing response.
+- [x] Consume token once; reject invalid, expired, reused, or weak-password requests generically.
+- [x] Update password hash inside transaction.
+- [x] Increment `users.token_version` and revoke all `user_sessions` after successful reset.
+- [x] Test identical forgot responses for existing/non-existing email, success, expiry, reuse, weak password, and session revocation.
 
 ### Task 4: Permanent account deletion
 
@@ -106,12 +106,12 @@
 **Interfaces:**
 - `DELETE /api/v1/auth/account` requires Bearer access token and body `{ "password": "..." }`.
 
-- [ ] Verify current password with existing `PasswordUtils.verify`.
-- [ ] Return `401` for wrong password without deleting data.
-- [ ] Delete user in transaction; rely on FK cascades for categories, transactions, sessions, and auth tokens.
-- [ ] Return `200` confirmation only after commit.
-- [ ] Test valid deletion, wrong password, missing password, and cascade cleanup.
-- [ ] Document irreversible behavior.
+- [x] Verify current password with existing `PasswordUtils.verify`.
+- [x] Return `401` for wrong password without deleting data.
+- [x] Delete user in transaction; rely on FK cascades for categories, transactions, sessions, and auth tokens.
+- [x] Return `200` confirmation only after commit.
+- [x] Test valid deletion, wrong password, missing password, cascade cleanup, and deleted-token rejection.
+- [x] Document irreversible behavior.
 
 ### Task 5: Bruno collection, docs, tests, release
 
@@ -125,13 +125,13 @@
 - Create: `bruno/ClariMoney_API/Auth/Delete Account.yml`
 - Modify: `migrations/README.md`
 
-- [ ] Add `verification_token`, `reset_token`, and `email_verified` variables without storing secrets in committed environments.
-- [ ] Add request scripts for response fields only; never print raw SMTP credentials.
-- [ ] Add examples and expected failure responses.
-- [ ] Validate YAML collection structure.
-- [ ] Run `DATABASE_URL=... JWT_SECRET=... dart test` with Neon-backed tests.
-- [ ] Run `dart analyze`, `dart_frog build`, and `git diff --check`.
-- [ ] Document migration 007 ordering, Gmail App Password setup, and required release env vars.
+- [x] Add `verification_token`, `reset_token`, and `email_verified` variables without storing secrets in committed environments.
+- [x] Add request scripts for response fields only; never print raw SMTP credentials.
+- [x] Add examples and expected failure responses.
+- [x] Validate YAML collection structure.
+- [x] Run `DATABASE_URL=... JWT_SECRET=... dart test` with Neon-backed tests.
+- [x] Run `dart analyze`, `dart_frog build`, and `git diff --check`.
+- [x] Document migration 007 ordering, Gmail App Password setup, and required release env vars.
 
 ## Self-review
 

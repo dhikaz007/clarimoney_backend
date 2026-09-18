@@ -34,7 +34,6 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/004_user_sessions.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/005_refresh_token_history.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/006_session_id_rotation.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/007_auth_tokens_email_verification.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/008_drop_redundant_auth_token_hash_index.sql
 ```
 
 ## Verification

@@ -67,6 +67,53 @@ void main() {
       await pool.close();
     }
   }, skip: _skipDbTest);
+
+  test('deleted account token is rejected', () async {
+    final pool = _pool();
+    final userId = const Uuid().v4();
+    final sessionId = const Uuid().v4();
+    final token = JwtUtils.generate(userId, sessionId: sessionId);
+    try {
+      await _insertUser(pool, userId);
+      await pool.execute(
+        Sql.named(
+          '''INSERT INTO user_sessions
+          (id, user_id, device_id, refresh_token_hash, expires_at)
+          VALUES (@id, @user_id, @device_id, 'test-hash', CURRENT_TIMESTAMP + INTERVAL '1 day')''',
+        ),
+        parameters: {
+          'id': sessionId,
+          'user_id': userId,
+          'device_id': sessionId,
+        },
+      );
+      final request = TestRequestContext(
+        path: '/api/v1/auth/account',
+        method: HttpMethod.delete,
+        body: jsonEncode({'password': 'password123'}),
+        headers: {'authorization': 'Bearer $token'},
+      );
+      request.provide<Pool<dynamic>>(pool);
+      request.provide<AuthSession>(AuthSession(userId, sessionId));
+      expect(
+        (await account.onRequest(request.context)).statusCode,
+        HttpStatus.ok,
+      );
+
+      final rejectedRequest = TestRequestContext(
+        path: '/api/v1/auth/me',
+        headers: {'authorization': 'Bearer $token'},
+      );
+      rejectedRequest.provide<Pool<dynamic>>(pool);
+      final rejected = await authMiddleware(
+        (_) => Response(body: 'unexpected'),
+      )(rejectedRequest.context);
+      expect(rejected.statusCode, HttpStatus.unauthorized);
+    } finally {
+      await _deleteUser(pool, userId);
+      await pool.close();
+    }
+  }, skip: _skipDbTest);
 }
 
 Future<Response> _delete(Pool<dynamic> pool, String userId, String password) =>
@@ -111,7 +158,9 @@ Pool<dynamic> _pool() => Pool<dynamic>.withUrl(
       .toString(),
 );
 
-bool get _skipDbTest => Platform.environment['DATABASE_URL'] == null;
+bool get _skipDbTest =>
+    Platform.environment['DATABASE_URL'] == null ||
+    Platform.environment['JWT_SECRET'] == null;
 
 Future<void> _insertUser(Pool<dynamic> pool, String userId) => pool.execute(
   Sql.named('''INSERT INTO users (id, email, password_hash)
@@ -171,10 +220,7 @@ Future<String> _insertRelatedData(Pool<dynamic> pool, String userId) async {
     Sql.named('''INSERT INTO refresh_token_history
       (token_hash, session_id, expires_at)
       VALUES (@hash, @session_id, CURRENT_TIMESTAMP + INTERVAL '1 day')'''),
-    parameters: {
-      'hash': historyHash,
-      'session_id': sessionId,
-    },
+    parameters: {'hash': historyHash, 'session_id': sessionId},
   );
   return historyHash;
 }

@@ -343,9 +343,10 @@ SMTP failure rolls back token invalidation and issuance. SMTP cannot participate
 in database commit: if delivery succeeds but commit later fails, delivered link
 may be unusable; another forgot-password request issues a replacement.
 
-Forgot-password responses use a 250 ms minimum duration, including missing-user
-and SMTP paths. SMTP latency remains observable up to the 10-second timeout;
-rate limiting is not implemented.
+Forgot-password responses use a 250 ms minimum duration. Missing-user requests
+also validate SMTP configuration and perform bounded SMTP connection/auth
+preflight without sending mail. All SMTP work is capped at 10 seconds. Residual
+network and connection timing can still differ; rate limiting is not implemented.
 
 ### `POST /api/v1/auth/reset-password`
 

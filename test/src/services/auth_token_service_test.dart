@@ -143,4 +143,6 @@ Future<void> _deleteUser(Pool<dynamic> pool, String id) => pool.execute(
   parameters: {'id': id},
 );
 
-bool get _skipDbTest => Platform.environment['DATABASE_URL'] == null;
+bool get _skipDbTest =>
+    Platform.environment['DATABASE_URL'] == null ||
+    Platform.environment['JWT_SECRET'] == null;
