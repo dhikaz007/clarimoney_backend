@@ -32,7 +32,7 @@ Constraints:
 
 ### `categories`
 
-Menyimpan klasifikasi expense system atau milik user.
+Menyimpan klasifikasi income/expense system atau milik user.
 
 | Column | Type | Null | Default | Description |
 |---|---|---:|---|---|
@@ -41,28 +41,33 @@ Menyimpan klasifikasi expense system atau milik user.
 | `name` | `VARCHAR(100)` | No | - | Nama category |
 | `icon` | `VARCHAR(50)` | No | `default_icon` | Nama icon client |
 | `color` | `VARCHAR(9)` | No | `#000000` | Warna format `#RRGGBB` |
-| `type` | `VARCHAR(20)` | No | - | MVP hanya `expense` |
+| `type` | `VARCHAR(20)` | No | `expense` | `income` atau `expense` |
+| `status` | `VARCHAR(20)` | No | `active` | `active` atau `archived` |
+| `origin` | `VARCHAR(20)` | No | `user_created` | `system` atau `user_created` |
 | `created_at` | `TIMESTAMPTZ` | Yes | `CURRENT_TIMESTAMP` | Waktu pembuatan category |
 
 Constraints:
 
 - Primary key: `categories_pkey` pada `id`.
 - Foreign key: `user_id` → `users.id`, delete cascade.
-- Check: `type = 'expense'`.
+- Check: `type` is `income` or `expense`.
+- Check: name trimmed, 1–50 characters; status and origin valid.
 - Unique expression index: `uq_categories_owner_name_type`.
 - Duplicate name dicegah case-insensitive per owner/type.
 
 ### `transactions`
 
-Menyimpan expense user.
+Menyimpan income atau expense user.
 
 | Column | Type | Null | Default | Description |
 |---|---|---:|---|---|
 | `id` | `UUID` | No | - | Primary key transaction |
 | `user_id` | `UUID` | No | - | Pemilik transaction |
 | `category_id` | `UUID` | Yes | - | Category expense |
+| `type` | `VARCHAR(20)` | No | `expense` | Transaction type |
 | `amount` | `NUMERIC(15,2)` | No | - | Nominal expense |
 | `date` | `TIMESTAMPTZ` | No | - | Tanggal expense |
+| `note` | `VARCHAR(500)` | Yes | - | Catatan trimmed |
 | `created_at` | `TIMESTAMPTZ` | Yes | `CURRENT_TIMESTAMP` | Waktu pencatatan |
 
 Constraints:
@@ -71,13 +76,19 @@ Constraints:
 - Foreign key: `user_id` → `users.id`, delete cascade.
 - Foreign key: `category_id` → `categories.id`, delete set null.
 - Check: `amount > 0`.
+- Check: category type matches transaction type; archived categories cannot receive new assignments.
 
 ## Indexes
 
 | Index | Table | Purpose |
 |---|---|---|
 | `idx_transactions_user_date` | `transactions` | Mempercepat history user berdasarkan date |
+| `idx_transactions_user_type_date` | `transactions` | History by owner, type, date |
+| `idx_transactions_category` | `transactions` | Category lookup |
+| `idx_transactions_note_search` | `transactions` | Case-insensitive note search |
 | `idx_categories_user` | `categories` | Mempercepat lookup category owner |
+| `idx_categories_user_type_status` | `categories` | Category type/status lookup |
+| `idx_categories_name_search` | `categories` | Case-insensitive category search |
 | `uq_categories_owner_name_type` | `categories` | Mencegah duplicate category |
 
 ## Relationships
@@ -100,6 +111,7 @@ Run numeric order:
 ```sh
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_initial_schema.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/002_mvp_constraints.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/009_phase2_unified_transactions.sql
 ```
 
 `init_schema.sql` deprecated. Gunakan folder `migrations/`.

@@ -11,6 +11,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/005_refresh_token_history.
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/006_session_id_rotation.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/007_auth_tokens_email_verification.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/008_drop_redundant_auth_token_hash_index.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/009_phase2_unified_transactions.sql
 ```
 
 Production uses `DATABASE_URL`; never commit credentials.
@@ -26,6 +27,13 @@ Migration 008 must run after migration 007. It removes legacy
 schema keeps the unique `auth_tokens_token_hash_key` index plus the required
 user/purpose and expiry indexes. `DROP INDEX IF EXISTS` makes cleanup safe for
 databases already migrated to current 007.
+
+Migration 009 unifies transactions for income and expense types. Existing
+transactions backfill to `expense`; existing categories retain `expense` type.
+It adds nullable notes, category lifecycle fields, income starter categories,
+ownership/type/status validation, and transaction/category search indexes.
+Apply only after migrations 001–008. Verify old transaction rows retain IDs,
+amounts, dates, and category references.
 
 Verify release schema state:
 
