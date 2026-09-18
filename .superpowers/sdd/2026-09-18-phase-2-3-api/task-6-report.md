@@ -2,8 +2,9 @@
 
 ## Status
 
-Blocked for Neon rollout. `DATABASE_URL` was unset, so live migration execution,
-release schema verification, and zero-skip DB-backed tests could not run.
+Neon migration and verifier passed. Zero-skip release tests remain blocked by
+existing `postgres` driver incompatibility with `.env` `channel_binding`, plus
+existing DB assertions expecting numeric values instead of driver strings.
 
 ## Finalized artifacts
 
@@ -11,22 +12,29 @@ release schema verification, and zero-skip DB-backed tests could not run.
   categories, summary, and Phase 3 comparisons.
 - Bruno requests already cover transaction CRUD/list/detail, category lifecycle,
   summary, comparison, and category comparison endpoints.
-- Extended `scripts/verify_migrations.sh` to verify Phase 2 tables, required
-  columns, indexes, and income starter category state.
+- Extended `scripts/verify_migrations.sh` to verify Phase 2 tables, exact
+  constraints, indexes, triggers, and all five exact income starter rows.
 - Extended `migrations/README.md` with Phase 2 release checks and verifier use.
-- Preserved unrelated `bruno/ClariMoney_API/environments/local.yml` token edits.
+- Sanitized tracked Bruno local token values.
+- Extended `scripts/verify_release.sh` to apply migrations 009/010, remove
+  unsupported `channel_binding`, run verifier, and fail skipped tests.
+- Normalized PostgreSQL numeric aggregates in summary route.
 
 ## Verification evidence
 
 - `./scripts/phase2_migration_test.sh` — passed.
-- `JWT_SECRET='task6-test-secret-012345678901234567890' dart test` — passed;
-  77 passed, 50 skipped DB-backed tests because `DATABASE_URL` was unset.
+- `./scripts/verify_release_test.sh` — passed; skip parser rejects compact and
+  spaced skip markers.
+- Safe `.env` release run — migrations 009/010 applied; verifier passed; tests
+  ran with zero skips but failed existing DB assertions after connection
+  normalization. Failures include numeric string expectations and comparison
+  route 500.
 - `dart analyze` — passed; no diagnostics.
 - `dart_frog build` — passed; existing rogue-route warning remains for
   `routes/api/v1/categories/[id].dart`.
 - Bruno YAML parse — passed; 38 files parsed.
 - `git diff --check` — passed.
-- `./scripts/verify_migrations.sh` — blocked: `DATABASE_URL: DATABASE_URL is required`.
+- `./scripts/verify_migrations.sh` — passed against Neon.
 
 ## Rogue route
 
@@ -36,13 +44,10 @@ warning.
 
 ## Release gate
 
-Run with production credentials before deploy:
+Run with production credentials before deploy. Script does not print credentials:
 
 ```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/009_phase2_unified_transactions.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/010_phase2_unified_transactions_review_fixes.sql
-./scripts/verify_migrations.sh
-DATABASE_URL="$DATABASE_URL" JWT_SECRET="$JWT_SECRET" dart test
+./scripts/verify_release.sh
 ```
 
 Do not commit credentials or token-filled local Bruno environment changes.

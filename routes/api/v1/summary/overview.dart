@@ -48,7 +48,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
     final items = <Map<String, dynamic>>[];
 
     for (final row in result) {
-      final total = row[4] as num;
+      final total = _numeric(row[4]);
       items.add({
         'category_id': row[0],
         'name': row[1],
@@ -73,11 +73,11 @@ FutureOr<Response> onRequest(RequestContext context) async {
     );
     final totalRow = totals.first;
     final summaryData = buildSummaryData(
-      income: totalRow[0] as num?,
-      expense: totalRow[1] as num?,
+        income: _numericOrNull(totalRow[0]),
+        expense: _numericOrNull(totalRow[1]),
       incomeCount: (totalRow[2] as int?) ?? 0,
       items: items,
-      netCashFlow: totalRow[3] as num?,
+      netCashFlow: _numericOrNull(totalRow[3]),
     );
 
     return apiResponse(
@@ -92,3 +92,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
     );
   }
 }
+
+num _numeric(Object? value) => value is num ? value : num.parse(value.toString());
+
+num? _numericOrNull(Object? value) => value == null ? null : _numeric(value);

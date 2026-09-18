@@ -69,51 +69,55 @@ BEGIN
     RAISE EXCEPTION 'legacy idx_auth_tokens_hash remains; apply migration 008';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'transactions'
-      AND column_name = 'type' AND data_type = 'character varying'
-      AND is_nullable = 'NO'
-  ) OR NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'transactions'
-      AND column_name = 'category_id' AND is_nullable = 'NO'
-  ) OR NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'transactions'
-      AND column_name = 'date' AND data_type = 'timestamp with time zone'
-  ) THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.transactions'::regclass AND attname = 'type' AND atttypid = 'pg_catalog.varchar'::regtype AND attnotnull)
+     OR NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.transactions'::regclass AND attname = 'category_id' AND attnotnull)
+     OR NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.transactions'::regclass AND attname = 'date' AND atttypid = 'pg_catalog.timestamptz'::regtype)
+     OR NOT EXISTS (SELECT 1 FROM pg_attribute WHERE attrelid = 'public.transactions'::regclass AND attname = 'note' AND atttypid = 'pg_catalog.varchar'::regtype AND atttypmod = 504) THEN
     RAISE EXCEPTION 'transactions phase 2 columns are incomplete';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'categories'
-      AND column_name = 'type' AND is_nullable = 'NO'
-  ) OR NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'categories'
-      AND column_name = 'status' AND is_nullable = 'NO'
-  ) OR NOT EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'categories'
-      AND column_name = 'origin' AND is_nullable = 'NO'
-  ) THEN
-    RAISE EXCEPTION 'categories phase 2 columns are incomplete';
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.transactions'::regclass AND conname = 'transactions_category_id_fkey' AND contype = 'f' AND confrelid = 'public.categories'::regclass)
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.transactions'::regclass AND conname = 'transactions_amount_positive' AND pg_get_constraintdef(oid) LIKE '%amount >%0%')
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.transactions'::regclass AND conname = 'transactions_type_check' AND pg_get_constraintdef(oid) LIKE '%income%expense%')
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.transactions'::regclass AND conname = 'transactions_note_check' AND pg_get_constraintdef(oid) LIKE '%char_length%note%500%') THEN
+    RAISE EXCEPTION 'transactions constraints are incomplete';
   END IF;
 
-  IF to_regclass('public.idx_transactions_user_type_date') IS NULL
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.categories'::regclass AND conname = 'categories_type_check' AND pg_get_constraintdef(oid) LIKE '%income%expense%')
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.categories'::regclass AND conname = 'categories_status_check' AND pg_get_constraintdef(oid) LIKE '%active%archived%')
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.categories'::regclass AND conname = 'categories_origin_check' AND pg_get_constraintdef(oid) LIKE '%system%' AND pg_get_constraintdef(oid) LIKE '%user_created%')
+     OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.categories'::regclass AND conname = 'categories_user_id_fkey' AND contype = 'f' AND confrelid = 'public.users'::regclass) THEN
+    RAISE EXCEPTION 'category constraints are incomplete';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.transactions'::regclass AND tgname = 'transactions_category_compatibility' AND NOT tgisinternal)
+     OR NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgrelid = 'public.categories'::regclass AND tgname = 'categories_identity_mutation_guard' AND NOT tgisinternal) THEN
+    RAISE EXCEPTION 'phase 2 compatibility triggers are missing';
+  END IF;
+
+  IF to_regclass('public.uq_categories_owner_name_type') IS NULL
+     OR to_regclass('public.idx_transactions_user_type_date') IS NULL
      OR to_regclass('public.idx_transactions_category') IS NULL
-     OR to_regclass('public.idx_categories_user_type_status') IS NULL THEN
-    RAISE EXCEPTION 'phase 2 query indexes are missing';
+     OR to_regclass('public.idx_transactions_note_search') IS NULL
+     OR to_regclass('public.idx_categories_user_type_status') IS NULL
+     OR to_regclass('public.idx_categories_name_search') IS NULL THEN
+    RAISE EXCEPTION 'phase 2 indexes are incomplete';
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM categories
-    WHERE id = '00000000-0000-0000-0000-000000000101'
-      AND type = 'income' AND status = 'active' AND origin = 'system'
-  ) THEN
-    RAISE EXCEPTION 'income starter categories are missing; apply migration 010';
+  IF EXISTS (SELECT 1
+    FROM (VALUES
+      ('00000000-0000-0000-0000-000000000101'::uuid, 'Salary', 'salary', '#2E7D32'),
+      ('00000000-0000-0000-0000-000000000102'::uuid, 'Bonus', 'bonus', '#388E3C'),
+      ('00000000-0000-0000-0000-000000000103'::uuid, 'Freelance', 'freelance', '#43A047'),
+      ('00000000-0000-0000-0000-000000000104'::uuid, 'Gift', 'gift', '#66BB6A'),
+      ('00000000-0000-0000-0000-000000000105'::uuid, 'Other', 'other', '#81C784')
+    ) AS expected(id, name, icon, color)
+    LEFT JOIN public.categories c ON c.id = expected.id
+      AND c.user_id IS NULL AND c.name = expected.name AND c.icon = expected.icon
+      AND c.color = expected.color AND c.type = 'income'
+      AND c.status = 'active' AND c.origin = 'system'
+    WHERE c.id IS NULL) THEN
+    RAISE EXCEPTION 'income starter categories are incomplete';
   END IF;
 END $$;
 SQL

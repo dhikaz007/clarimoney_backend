@@ -34,4 +34,4 @@ run_case 'compact many skipped' 1 '00:00 +0 ~43: test skipped'
 run_case 'spaced skipped' 1 '00:00 +0 ~ 1 skipped'
 run_case 'zero skipped' 0 '00:00 +1: All tests passed!'
 
-printf '%s\n' 'verify_release parser tests passed.'
+printf '%s\n' 'verify_release migration and skip parser tests passed.'
