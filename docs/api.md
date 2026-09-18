@@ -79,9 +79,8 @@ Response `200`:
 - Access JWTs expire after 15 minutes and include session ownership binding.
 - Access JWTs issued before session rollout lack `sid` and are invalid after
   deployment. Clients must sign in again.
-- Refresh tokens expire 30 days after issuance. Each successful refresh rotates
-  the token and resets session expiry to exactly 30 days from refresh time
-  (sliding expiry).
+- Refresh tokens expire 7 days after login. Each successful refresh rotates the
+  token but keeps the original session expiry (fixed expiry).
 - Reusing any consumed refresh token is intentional token-theft protection: the
   entire owning session is revoked, and the request returns `401`.
 - `POST /api/v1/auth/logout` and `POST /api/v1/auth/logout-all` accept repeated

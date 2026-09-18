@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - Access token lifetime: 15 minutes.
-- Refresh token lifetime: 30 days.
+- Refresh token lifetime: 7 days, fixed from session creation.
 - Raw refresh tokens never enter DB.
 - `device_id` comes from mobile secure storage; `device_name` is display metadata.
 - Existing protected endpoints keep Bearer access-token auth.

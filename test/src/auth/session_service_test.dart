@@ -8,7 +8,7 @@ import 'package:uuid/uuid.dart';
 
 void main() {
   test('refresh lifetime remains bounded', () {
-    expect(SessionService.refreshTokenLifetime, const Duration(days: 30));
+    expect(SessionService.refreshTokenLifetime, const Duration(days: 7));
   });
 
   test('created access token carries session ID claim', () async {

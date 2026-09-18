@@ -370,67 +370,68 @@ void main() {
     }
   }, skip: _skipDbTest);
 
-  test('refresh rotates token and slides session expiry', () async {
-    final pool = _pool();
-    final userId = const Uuid().v4();
-    try {
-      await _insertUser(pool, userId, password: 'password123');
-      final loggedIn = await login.onRequest(_loginRequest(userId, pool));
-      final data =
-          (await loggedIn.json() as Map<String, dynamic>)['data']
-              as Map<String, dynamic>;
-      final before = await pool.execute(
-        Sql.named('SELECT expires_at FROM user_sessions WHERE id = @id'),
-        parameters: {'id': data['session_id']},
-      );
-      final beforeExpiry = before.single[0] as DateTime;
-      final beforeNow = DateTime.now().toUtc();
-      expect(
-        (beforeExpiry.difference(beforeNow) -
-                SessionService.refreshTokenLifetime)
-            .abs()
-            .inSeconds,
-        lessThan(2),
-      );
-      final response = await refresh.onRequest(
-        _withPool(
-          TestRequestContext(
-            path: '/api/v1/auth/refresh',
-            method: HttpMethod.post,
-            body: jsonEncode({'refresh_token': data['refresh_token']}),
+  test(
+    'refresh rotates token without extending fixed session expiry',
+    () async {
+      final pool = _pool();
+      final userId = const Uuid().v4();
+      try {
+        await _insertUser(pool, userId, password: 'password123');
+        final loggedIn = await login.onRequest(_loginRequest(userId, pool));
+        final data =
+            (await loggedIn.json() as Map<String, dynamic>)['data']
+                as Map<String, dynamic>;
+        final before = await pool.execute(
+          Sql.named('SELECT expires_at FROM user_sessions WHERE id = @id'),
+          parameters: {'id': data['session_id']},
+        );
+        final beforeExpiry = before.single[0] as DateTime;
+        final beforeNow = DateTime.now().toUtc();
+        expect(
+          (beforeExpiry.difference(beforeNow) -
+                  SessionService.refreshTokenLifetime)
+              .abs()
+              .inSeconds,
+          lessThan(2),
+        );
+        final response = await refresh.onRequest(
+          _withPool(
+            TestRequestContext(
+              path: '/api/v1/auth/refresh',
+              method: HttpMethod.post,
+              body: jsonEncode({'refresh_token': data['refresh_token']}),
+            ),
+            pool,
           ),
-          pool,
-        ),
-      );
-      final refreshed =
-          (await response.json() as Map<String, dynamic>)['data']
-              as Map<String, dynamic>;
-      final after = await pool.execute(
-        Sql.named('SELECT expires_at FROM user_sessions WHERE id = @id'),
-        parameters: {'id': data['session_id']},
-      );
-      final afterExpiry = after.single[0] as DateTime;
-      final afterNow = DateTime.now().toUtc();
+        );
+        final refreshed =
+            (await response.json() as Map<String, dynamic>)['data']
+                as Map<String, dynamic>;
+        final after = await pool.execute(
+          Sql.named('SELECT expires_at FROM user_sessions WHERE id = @id'),
+          parameters: {'id': data['session_id']},
+        );
+        final afterExpiry = after.single[0] as DateTime;
 
-      expect(response.statusCode, HttpStatus.ok);
-      expect(refreshed['refresh_token'], isNot(data['refresh_token']));
-      expect(
-        (afterExpiry.difference(afterNow) - SessionService.refreshTokenLifetime)
-            .abs()
-            .inSeconds,
-        lessThan(2),
-      );
-      expect(
-        await SessionService(
-          pool,
-        ).rotateRefreshToken(data['refresh_token'] as String),
-        isNull,
-      );
-    } finally {
-      await _deleteUser(pool, userId);
-      await pool.close();
-    }
-  }, skip: _skipDbTest);
+        expect(response.statusCode, HttpStatus.ok);
+        expect(refreshed['refresh_token'], isNot(data['refresh_token']));
+        expect(
+          (afterExpiry.difference(beforeExpiry)).abs().inSeconds,
+          lessThan(2),
+        );
+        expect(
+          await SessionService(
+            pool,
+          ).rotateRefreshToken(data['refresh_token'] as String),
+          isNull,
+        );
+      } finally {
+        await _deleteUser(pool, userId);
+        await pool.close();
+      }
+    },
+    skip: _skipDbTest,
+  );
 
   test(
     'current logout is idempotent and cross-user revoke is denied',

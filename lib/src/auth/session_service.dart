@@ -17,7 +17,7 @@ class SessionService {
              sessionId: sessionId,
            ));
 
-  static const refreshTokenLifetime = Duration(days: 30);
+  static const refreshTokenLifetime = Duration(days: 7);
   final Pool<dynamic> _pool;
   final String Function(String userId, String sessionId, int tokenVersion)
   _accessTokenGenerator;
@@ -129,7 +129,6 @@ class SessionService {
     final tokenHash = RefreshTokenUtils.hash(refreshToken);
     final replacementToken = RefreshTokenUtils.generate();
     final now = DateTime.now().toUtc();
-    final expiresAt = now.add(refreshTokenLifetime);
 
     return _pool.runTx((session) async {
       final result = await session.execute(
@@ -191,7 +190,7 @@ class SessionService {
         '''),
         parameters: {
           'replacement_hash': RefreshTokenUtils.hash(replacementToken),
-          'expires_at': expiresAt,
+          'expires_at': sessionExpires,
           'last_used_at': now,
           'id': sessionId,
           'user_id': userId,
@@ -221,7 +220,7 @@ class SessionService {
         parameters: {
           'token_hash': RefreshTokenUtils.hash(replacementToken),
           'session_id': sessionId,
-          'expires_at': expiresAt,
+          'expires_at': sessionExpires,
         },
       );
       return {'accessToken': accessToken, 'refreshToken': replacementToken};
