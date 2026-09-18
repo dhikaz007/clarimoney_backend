@@ -10,6 +10,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/004_user_sessions.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/005_refresh_token_history.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/006_session_id_rotation.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/007_auth_tokens_email_verification.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/008_drop_redundant_auth_token_hash_index.sql
 ```
 
 Production uses `DATABASE_URL`; never commit credentials.
@@ -19,6 +20,11 @@ verification, password reset, or account deletion routes. It adds optional
 email verification state plus one-time hashed auth tokens. Apply migrations in
 numeric order against each Neon database; inspect partially migrated databases
 before retrying.
+
+Migration 008 must run after migration 007. It safely removes the redundant
+`idx_auth_tokens_hash` index from databases where migration 007 created it;
+the unique constraint on `auth_tokens.token_hash` preserves required lookup
+indexing. `DROP INDEX IF EXISTS` makes it safe for databases already corrected.
 
 ## Release environment
 
