@@ -13,6 +13,13 @@ cp .env.example .env
 export DATABASE_URL='postgresql://...'
 export JWT_SECRET='at-least-32-random-characters'
 export ALLOWED_ORIGIN='http://localhost:3000'
+export APP_BASE_URL='http://localhost:3000'
+# Optional email features: configure all SMTP values before sending mail.
+export SMTP_HOST='smtp.gmail.com'
+export SMTP_PORT='587'
+export SMTP_USERNAME='you@gmail.com'
+export SMTP_PASSWORD='google-app-password'
+export SMTP_FROM='you@gmail.com'
 dart pub get
 dart_frog dev
 ```
@@ -26,6 +33,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/003_token_version.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/004_user_sessions.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/005_refresh_token_history.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/006_session_id_rotation.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/007_auth_tokens_email_verification.sql
 ```
 
 ## Verification
@@ -40,6 +48,10 @@ dart_frog build
 Production requirements:
 - Rotate any Neon credential exposed outside secret storage.
 - Set `DATABASE_URL`, `JWT_SECRET`, and `ALLOWED_ORIGIN` in deployment secrets.
+- Set `APP_BASE_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`,
+  and `SMTP_FROM` to enable verification and password-reset email. Gmail requires
+  2-Step Verification plus a Google App Password; use that App Password, never
+  your normal Google password.
 - Never commit `.env`.
 - Access JWTs issued before this rollout lack required `sid` session binding and
   are invalid after deployment. Clients must sign in again.
