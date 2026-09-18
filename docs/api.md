@@ -48,6 +48,8 @@ Public:
 - `POST /api/v1/auth/register`
 - `POST /api/v1/auth/login`
 - `POST /api/v1/auth/verify-email`
+- `POST /api/v1/auth/forgot-password`
+- `POST /api/v1/auth/reset-password`
 
 Protected auth:
 
@@ -282,6 +284,49 @@ Invalid, expired, or reused token returns generic `400`:
 SMTP configuration uses `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
 `SMTP_PASSWORD`, `SMTP_FROM`, and `APP_BASE_URL`. Credentials stay outside
 committed files. Gmail requires an App Password.
+
+### `POST /api/v1/auth/forgot-password`
+
+Public. Request:
+
+```json
+{ "email": "user@example.com" }
+```
+
+Always returns `200` with the same response, whether account exists:
+
+```json
+{
+  "status_code": 200,
+  "message": "If an account exists, password reset instructions were sent",
+  "data": null
+}
+```
+
+Existing accounts receive one 30-minute reset token. Prior unused reset tokens
+become invalid. Invalid input, missing accounts, and email delivery failures
+remain indistinguishable through this endpoint.
+
+### `POST /api/v1/auth/reset-password`
+
+Public. Request:
+
+```json
+{ "token": "opaque-reset-token", "password": "newpassword123" }
+```
+
+Password requires at least 8 characters. Successful reset consumes token once,
+updates password hash, increments `token_version`, and revokes every active
+session. Invalid, expired, reused, or weak-password requests return generic
+`400`:
+
+```json
+{
+  "status_code": 400,
+  "message": "Invalid or expired password reset request",
+  "data": null
+}
+```
 
 ## Categories API
 

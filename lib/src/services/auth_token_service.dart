@@ -60,25 +60,31 @@ class AuthTokenService {
   }
 
   Future<String?> consume(String token, String purpose) async {
-    final result = await _pool.runTx((session) async {
-      final rows = await session.execute(
-        Sql.named('''SELECT user_id FROM auth_tokens
-          WHERE token_hash = @token_hash AND purpose = @purpose
-            AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
-          FOR UPDATE'''),
-        parameters: {
-          'token_hash': AuthTokenUtils.hash(token),
-          'purpose': purpose,
-        },
-      );
-      if (rows.isEmpty || rows.first[0] is! String) return null;
-      final update = await session.execute(
-        Sql.named('''UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP
-          WHERE token_hash = @token_hash AND used_at IS NULL'''),
-        parameters: {'token_hash': AuthTokenUtils.hash(token)},
-      );
-      return update.affectedRows == 1 ? rows.first[0] as String : null;
-    });
-    return result;
+    return _pool.runTx(
+      (session) => consumeInTransaction(session, token, purpose),
+    );
+  }
+
+  Future<String?> consumeInTransaction(
+    Session session,
+    String token,
+    String purpose,
+  ) async {
+    final tokenHash = AuthTokenUtils.hash(token);
+    final rows = await session.execute(
+      Sql.named('''SELECT user_id FROM auth_tokens
+        WHERE token_hash = @token_hash AND purpose = @purpose
+          AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+        FOR UPDATE'''),
+      parameters: {'token_hash': tokenHash, 'purpose': purpose},
+    );
+    if (rows.isEmpty || rows.first[0] is! String) return null;
+    final update = await session.execute(
+      Sql.named('''UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP
+        WHERE token_hash = @token_hash AND purpose = @purpose
+          AND used_at IS NULL'''),
+      parameters: {'token_hash': tokenHash, 'purpose': purpose},
+    );
+    return update.affectedRows == 1 ? rows.first[0] as String : null;
   }
 }

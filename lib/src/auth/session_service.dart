@@ -275,6 +275,17 @@ class SessionService {
     return result.affectedRows;
   }
 
+  Future<int> revokeAllInTransaction(Session session, String userId) async {
+    final result = await session.execute(
+      Sql.named('''
+        UPDATE user_sessions SET revoked_at = CURRENT_TIMESTAMP
+        WHERE user_id = @user_id AND revoked_at IS NULL
+      '''),
+      parameters: {'user_id': userId},
+    );
+    return result.affectedRows;
+  }
+
   Future<void> _revoke(Session session, String sessionId, String userId) async {
     await session.execute(
       Sql.named('''
