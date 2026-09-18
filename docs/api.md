@@ -55,6 +55,7 @@ Protected auth:
 
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/resend-verification`
+- `DELETE /api/v1/auth/account`
 
 Email verification remains optional. Registration and login succeed before
 verification.
@@ -223,6 +224,30 @@ Requires JWT. Returns current profile state:
   }
 }
 ```
+
+### `DELETE /api/v1/auth/account`
+
+Requires JWT. Permanently deletes current account after verifying current
+password. Deletion is irreversible. Foreign-key cascades remove categories,
+transactions, sessions, and auth tokens.
+
+Request:
+
+```json
+{ "password": "password123" }
+```
+
+Success `200` is returned only after deletion commits:
+
+```json
+{
+  "status_code": 200,
+  "message": "Account deleted successfully",
+  "data": null
+}
+```
+
+Missing or incorrect password returns `401` without deleting account data.
 
 ### `POST /api/v1/auth/resend-verification`
 
