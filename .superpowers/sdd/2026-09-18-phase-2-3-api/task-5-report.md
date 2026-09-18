@@ -26,4 +26,4 @@ Complete. Review findings fixed across authenticated comparison overview, catego
 
 ## Commit
 
-Recorded after commit below.
+- `a1e8006 fix: harden comparison API contracts`
