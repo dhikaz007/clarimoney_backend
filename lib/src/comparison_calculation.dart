@@ -121,28 +121,54 @@ Map<String, dynamic> compareValue({
 PeriodTotals aggregatePeriod(Iterable<ComparisonTransaction> transactions) {
   num? income;
   num? expense;
+  var incomeUnavailable = false;
+  var expenseUnavailable = false;
   final categories = <String, CategoryTotal>{};
+  final unavailableCategories = <String>{};
   for (final transaction in transactions) {
     if (!transaction.amount.isFinite) {
       throw ArgumentError('transaction amounts must be finite');
     }
     if (transaction.type == 'income') {
-      final sum = income == null
-          ? transaction.amount
-          : income + transaction.amount;
-      income = sum.isFinite ? sum : null;
+      if (!incomeUnavailable) {
+        final sum = income == null
+            ? transaction.amount
+            : income + transaction.amount;
+        if (sum.isFinite) {
+          income = sum;
+        } else {
+          income = null;
+          incomeUnavailable = true;
+        }
+      }
     } else if (transaction.type == 'expense') {
-      final sum = expense == null
-          ? transaction.amount
-          : expense + transaction.amount;
-      expense = sum.isFinite ? sum : null;
+      if (!expenseUnavailable) {
+        final sum = expense == null
+            ? transaction.amount
+            : expense + transaction.amount;
+        if (sum.isFinite) {
+          expense = sum;
+        } else {
+          expense = null;
+          expenseUnavailable = true;
+        }
+      }
     } else {
       continue;
     }
     final category = categories[transaction.categoryId];
-    final sum = category?.value == null
+    if (unavailableCategories.contains(transaction.categoryId)) continue;
+    final sum = category == null
         ? transaction.amount
-        : category!.value! + transaction.amount;
+        : category.value! + transaction.amount;
+    if (!sum.isFinite) {
+      unavailableCategories.add(transaction.categoryId);
+      categories[transaction.categoryId] = CategoryTotal(
+        name: transaction.categoryName,
+        value: null,
+      );
+      continue;
+    }
     categories[transaction.categoryId] = CategoryTotal(
       name: transaction.categoryName,
       value: sum.isFinite ? sum : null,

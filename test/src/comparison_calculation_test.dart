@@ -325,4 +325,88 @@ void main() {
 
     expect(result.categories.keys, ['a', 'z']);
   });
+
+  test(
+    'keeps income unavailable after overflow despite later transactions',
+    () {
+      final totals = aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'i',
+          categoryName: 'I',
+          type: 'income',
+          amount: double.maxFinite,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'i',
+          categoryName: 'I',
+          type: 'income',
+          amount: double.maxFinite,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'i',
+          categoryName: 'I',
+          type: 'income',
+          amount: 1,
+        ),
+      ]);
+
+      expect(totals.income, isNull);
+    },
+  );
+
+  test(
+    'keeps expense unavailable after overflow despite later transactions',
+    () {
+      final totals = aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'e',
+          categoryName: 'E',
+          type: 'expense',
+          amount: double.maxFinite,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'e',
+          categoryName: 'E',
+          type: 'expense',
+          amount: double.maxFinite,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'e',
+          categoryName: 'E',
+          type: 'expense',
+          amount: 1,
+        ),
+      ]);
+
+      expect(totals.expense, isNull);
+    },
+  );
+
+  test(
+    'keeps category unavailable after overflow despite later transactions',
+    () {
+      final totals = aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'x',
+          categoryName: 'X',
+          type: 'expense',
+          amount: double.maxFinite,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'x',
+          categoryName: 'X',
+          type: 'expense',
+          amount: double.maxFinite,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'x',
+          categoryName: 'X',
+          type: 'expense',
+          amount: 1,
+        ),
+      ]);
+
+      expect(totals.categories['x']?.value, isNull);
+    },
+  );
 }

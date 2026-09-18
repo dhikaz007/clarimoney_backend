@@ -17,12 +17,13 @@ Implemented pure comparison helpers in `lib/src/comparison_calculation.dart`:
 - Zero-change categories excluded from drivers.
 - Precision policy: preserve raw numeric arithmetic; no rounding of values or percentages.
 - Derived non-finite sums, differences, and percentages become unavailable (`null`); category IDs sort before output.
+- Overflowed income, expense, and category aggregates remain unavailable for all later transactions; no recovery/restart.
 
-Tests added: `test/src/comparison_calculation_test.dart`, including review edge cases for rollover, DST, month lengths, cross-month ranges, non-finite values, overflow arithmetic, invalid types, zero drivers, unavailable NCF, decimals, and deterministic ordering.
+Tests added: `test/src/comparison_calculation_test.dart`, including review edge cases for rollover, DST, month lengths, cross-month ranges, non-finite values, overflow arithmetic, invalid types, zero drivers, unavailable NCF, decimals, deterministic ordering, and three-transaction overflow recovery.
 
 Verification:
 
-- Focused comparison tests: passed, 19 tests.
+- Focused comparison tests with valid ephemeral `JWT_SECRET`: passed, 21 tests.
 - Full tests with valid ephemeral `JWT_SECRET`: passed, 72 tests; 48 skipped.
 - `dart analyze`: passed.
 - `dart_frog build`: passed.
