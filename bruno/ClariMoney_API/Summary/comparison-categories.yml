@@ -1,0 +1,16 @@
+meta:
+  name: comparison-categories
+  type: http
+  seq: 3
+  tags:
+request:
+  method: GET
+  url: '{{base_url}}/api/v1/summary/comparison/categories?period=this_month'
+  headers:
+    - name: Authorization
+      value: 'Bearer {{access_token}}'
+      disabled: false
+  body:
+    type: json
+    data: {}
+tests: []

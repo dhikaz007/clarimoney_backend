@@ -146,6 +146,20 @@ remain read-only. Category listing includes archived categories with
 `status: "archived"`; archived categories retain historical transactions but
 cannot receive new assignments.
 
+## Comparison API
+
+All comparison endpoints require JWT and use UTC half-open ranges:
+
+- `GET /api/v1/summary/comparison?period=this_month`
+- `GET /api/v1/summary/comparison/categories?period=this_month`
+- `GET /api/v1/categories/:id/comparison?period=this_month`
+
+`period` accepts `this_month` or `previous_month`. Response includes `periods`
+with full ISO ranges for current and previous periods. Categories match by
+persistent ID, retain current name, and drivers return at most three entries,
+sorted by absolute change magnitude then category ID. Foreign category IDs
+return `404`.
+
 ## Health check
 
 ### `GET /`

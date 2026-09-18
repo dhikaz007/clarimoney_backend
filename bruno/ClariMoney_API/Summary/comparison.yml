@@ -1,0 +1,16 @@
+meta:
+  name: comparison
+  type: http
+  seq: 2
+  tags:
+request:
+  method: GET
+  url: '{{base_url}}/api/v1/summary/comparison?period=this_month'
+  headers:
+    - name: Authorization
+      value: 'Bearer {{access_token}}'
+      disabled: false
+  body:
+    type: json
+    data: {}
+tests: []
