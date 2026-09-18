@@ -80,7 +80,16 @@ BEGIN
      OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.transactions'::regclass AND conname = 'transactions_amount_positive' AND pg_get_constraintdef(oid) LIKE '%amount >%0%')
      OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.transactions'::regclass AND conname = 'transactions_type_check' AND pg_get_constraintdef(oid) LIKE '%income%expense%')
      OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'public.transactions'::regclass AND conname = 'transactions_note_check' AND pg_get_constraintdef(oid) LIKE '%char_length%note%500%') THEN
-     RAISE EXCEPTION 'transactions constraints are incomplete';
+      RAISE EXCEPTION 'transactions constraints are incomplete';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'transactions'
+      AND column_name = 'amount' AND data_type = 'numeric'
+      AND numeric_precision = 15 AND numeric_scale = 2
+  ) THEN
+    RAISE EXCEPTION 'transactions.amount must remain NUMERIC(15,2)';
   END IF;
 
   IF EXISTS (SELECT 1 FROM public.transactions WHERE amount::numeric <> round(amount::numeric, 2)) THEN

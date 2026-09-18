@@ -1,23 +1,32 @@
+import 'exact_decimal.dart';
+
 Map<String, dynamic> buildSummaryData({
-  required num? income,
-  required num? expense,
+  required Object? income,
+  required Object? expense,
   required int incomeCount,
   required List<Map<String, dynamic>> items,
-  num? netCashFlow,
+  Object? netCashFlow,
 }) {
-  final totalIncome = income ?? 0;
-  final totalExpense = expense ?? 0;
+  final totalIncome = income == null
+      ? ExactDecimal.parse(0)
+      : ExactDecimal.parse(income);
+  final totalExpense = expense == null
+      ? ExactDecimal.parse(0)
+      : ExactDecimal.parse(expense);
   for (final item in items) {
-    final total = item['total'] as num;
-    item['percentage'] = totalExpense == 0 ? 0 : total / totalExpense * 100;
+    final total = ExactDecimal.parse(item['total']);
+    item['total'] = total.jsonValue;
+    item['percentage'] = totalExpense.isZero
+        ? 0
+        : total.divide(totalExpense).multiplyInteger(100).jsonValue;
   }
   final available = incomeCount > 0;
   return {
-    'total_income': totalIncome,
-    'total_expense': totalExpense,
+    'total_income': totalIncome.jsonValue,
+    'total_expense': totalExpense.jsonValue,
     'net_cash_flow_available': available,
     'net_cash_flow': available
-        ? (netCashFlow ?? totalIncome - totalExpense)
+        ? exactJsonDecimal(netCashFlow ?? (totalIncome - totalExpense))
         : null,
     'largest_category': items.isEmpty ? null : items.first,
   };

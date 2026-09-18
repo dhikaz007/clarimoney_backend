@@ -45,7 +45,9 @@ FutureOr<Response> onRequest(RequestContext context) async {
           message: 'Invalid period',
         );
       }
-      if (categoryId != null && !validUuid(categoryId)) {
+      if (categoryId != null &&
+          categoryId.isNotEmpty &&
+          !validUuid(categoryId)) {
         return apiResponse(
           statusCode: HttpStatus.badRequest,
           message: 'Invalid category_id',

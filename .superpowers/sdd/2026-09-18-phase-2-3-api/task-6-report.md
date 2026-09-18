@@ -33,9 +33,9 @@ start remains previous-period data.
 - Focused Neon comparison, summary, auth tests — 35 passed.
 - Full `./scripts/verify_release.sh` — 127 passed, zero skipped; migration
   verifier passed.
-- `dart analyze` — passed; no diagnostics.
-- `dart_frog build` — passed; existing rogue-route warning remains for
-  `routes/api/v1/categories/[id].dart`.
+- `dart analyze` — passed; info-level style diagnostics remain.
+- `dart_frog build` — passed; category route moved to
+  `routes/api/v1/categories/[id]/index.dart`; no known rogue-route warning.
 - Bruno YAML parse — passed; 38 files parsed.
 - `git diff --check` — passed.
 - `./scripts/verify_migrations.sh` — passed against Neon.

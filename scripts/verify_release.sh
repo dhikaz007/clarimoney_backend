@@ -32,6 +32,10 @@ if [[ "$release_host" == *neon.tech || "$release_host" == *onrender.com || "$rel
 fi
 export DATABASE_URL="$RELEASE_VERIFY_DATABASE_URL"
 : "${JWT_SECRET:?JWT_SECRET is required}"
+if [[ ${#JWT_SECRET} -lt 32 ]]; then
+  printf '%s\n' 'Release verification refused: JWT_SECRET must contain at least 32 characters.' >&2
+  exit 1
+fi
 if [[ "$DATABASE_URL" == *'channel_binding='* ]]; then
   DATABASE_URL="$(python3 - "$DATABASE_URL" <<'PY'
 import sys

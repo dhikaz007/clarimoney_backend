@@ -19,6 +19,10 @@ void main() {
     expect(comparisonJsonNumeric('12.50'), '12.50');
     expect(comparisonJsonNumeric('12'), 12);
   });
+  test('preserves large comparison decimal output', () {
+    expect(comparisonJsonNumeric('9007199254740991.99'), '9007199254740991.99');
+    expect(comparisonJsonNumeric('9007199254740991.98'), '9007199254740991.98');
+  });
   test('derives previous full month', () {
     final period = deriveComparisonPeriod(
       start: DateTime.utc(2026, 9, 1),

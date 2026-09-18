@@ -53,4 +53,19 @@ void main() {
     expect(full['total_income'], 100.10);
     expect(full['total_expense'], 0.10);
   });
+
+  test('large decimal values stay exact in JSON shape', () {
+    final data = buildSummaryData(
+      income: '9007199254740991.99',
+      expense: '0.01',
+      incomeCount: 1,
+      items: [
+        {'total': '0.01'},
+      ],
+      netCashFlow: '9007199254740991.98',
+    );
+    expect(data['total_income'], '9007199254740991.99');
+    expect(data['total_expense'], 0.01);
+    expect(data['net_cash_flow'], '9007199254740991.98');
+  });
 }

@@ -142,24 +142,18 @@ Future<Map<String, dynamic>> fetchComparison({
   for (final row in categories) {
     final id = row[0].toString();
     final name = row[1] as String;
-    currentCategories[id] = CategoryTotal(
-      name: name,
-      value: parseComparisonNumeric(row[2]),
-    );
-    previousCategories[id] = CategoryTotal(
-      name: name,
-      value: parseComparisonNumeric(row[3]),
-    );
+    currentCategories[id] = CategoryTotal(name: name, value: null);
+    previousCategories[id] = CategoryTotal(name: name, value: null);
   }
   final result = buildComparison(
     current: PeriodTotals(
-      income: parseComparisonNumeric(total[0]),
-      expense: parseComparisonNumeric(total[2]),
+      income: null,
+      expense: null,
       categories: currentCategories,
     ),
     previous: PeriodTotals(
-      income: parseComparisonNumeric(total[1]),
-      expense: parseComparisonNumeric(total[3]),
+      income: null,
+      expense: null,
       categories: previousCategories,
     ),
   );
@@ -186,9 +180,15 @@ Future<Map<String, dynamic>> fetchComparison({
   result.drivers
     ..clear()
     ..addAll(
-      categories.take(3).map((row) {
+      categories.where((row) => _isNonZero(row[4])).take(3).map((row) {
         final item = result.categories[row[0].toString()]!;
-        return <String, dynamic>{...item};
+        return <String, dynamic>{
+          ...item,
+          'current': comparisonJsonNumeric(row[2]),
+          'previous': comparisonJsonNumeric(row[3]),
+          'absolute_change': comparisonJsonNumeric(row[4]),
+          'percentage_change': comparisonJsonNumeric(row[5]),
+        };
       }),
     );
   result.netCashFlow['current'] = comparisonJsonNumeric(total[4]);
@@ -268,6 +268,9 @@ Future<Map<String, dynamic>> fetchComparison({
         .toList(),
   };
 }
+
+bool _isNonZero(Object? value) =>
+    value != null && value.toString() != '0' && value.toString() != '0.00';
 
 Object? _categoryRaw(Iterable<List<dynamic>> rows, String id, int index) {
   for (final row in rows) {

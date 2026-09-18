@@ -22,7 +22,8 @@ Complete. Review findings fixed across authenticated comparison overview, catego
 ## Verification
 
 - `dart analyze`: passed with existing lint infos; no errors.
-- `dart_frog build`: passed. Existing rogue-route warning remains for pre-existing `routes/api/v1/categories/[id].dart`.
+- `dart_frog build`: passed. Category detail route uses Dart Frog's valid
+  `routes/api/v1/categories/[id]/index.dart` layout.
 - Focused tests: `dart test test/src/comparison_calculation_test.dart test/routes/comparison_routes_test.dart` — passed, 21 passed, 2 skipped DB integration tests.
 - Neon-backed tests: unavailable; `DATABASE_URL` and `JWT_SECRET` unset in environment.
 - Valid-secret full suite: passed with `JWT_SECRET='test-secret-with-at-least-32-characters'`; DB integration tests skipped because `DATABASE_URL` was unset.

@@ -17,7 +17,7 @@ chmod +x "$bin_dir/dart" "$bin_dir/psql"
 
 run_case() {
   local name=$1 expected=$2 output=$3
-  if DART_TEST_OUTPUT="$output" PATH="$bin_dir:$PATH" DATABASE_URL=test JWT_SECRET=test \
+  if DART_TEST_OUTPUT="$output" PATH="$bin_dir:$PATH" DATABASE_URL=test RELEASE_VERIFY_DATABASE_URL=disposable ALLOW_RELEASE_DB_MUTATION=true RELEASE_VERIFY_DISPOSABLE=true JWT_SECRET=01234567890123456789012345678901 \
     bash "$script_dir/verify_release.sh" >/dev/null 2>&1; then
     actual=0
   else
@@ -33,5 +33,11 @@ run_case 'compact one skipped' 1 '00:00 +0 ~1: test skipped'
 run_case 'compact many skipped' 1 '00:00 +0 ~43: test skipped'
 run_case 'spaced skipped' 1 '00:00 +0 ~ 1 skipped'
 run_case 'zero skipped' 0 '00:00 +1: All tests passed!'
+
+if ALLOW_RELEASE_DB_MUTATION=true RELEASE_VERIFY_DISPOSABLE=true RELEASE_VERIFY_DATABASE_URL=test \
+  JWT_SECRET=short PATH="$bin_dir:$PATH" bash "$script_dir/verify_release.sh" >/dev/null 2>&1; then
+  printf 'failed: short JWT secret accepted\n' >&2
+  exit 1
+fi
 
 printf '%s\n' 'verify_release migration and skip parser tests passed.'

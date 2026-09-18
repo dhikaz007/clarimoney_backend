@@ -6,7 +6,7 @@ import 'package:dart_frog_test/dart_frog_test.dart';
 import 'package:test/test.dart';
 
 import '../../routes/api/v1/categories/index.dart' as categories;
-import '../../routes/api/v1/categories/[id].dart' as category_detail;
+import '../../routes/api/v1/categories/[id]/index.dart' as category_detail;
 import '../../routes/api/v1/transactions/index.dart' as transactions;
 import '../../routes/api/v1/transactions/[id].dart' as transaction_detail;
 
