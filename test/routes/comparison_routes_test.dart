@@ -124,6 +124,72 @@ void main() {
     },
     skip: _skipDbTest,
   );
+
+  test(
+    'comparison drivers include current-only and previous-only categories',
+    () async {
+      final fixture = await _Fixture.create();
+      try {
+        final now = DateTime.now().toUtc();
+        final currentDate = DateTime.utc(now.year, now.month, 5);
+        final previousDate = DateTime.utc(now.year, now.month - 1, 5);
+        final previousOnly = await fixture.insertCategory('Previous only');
+        final both = await fixture.insertCategory('Both');
+        final low = await fixture.insertCategory('Low');
+
+        await fixture.insertTransaction(
+          amount: 60,
+          type: 'expense',
+          date: currentDate,
+        );
+        await fixture.insertTransaction(
+          amount: 80,
+          type: 'expense',
+          date: previousDate,
+          categoryId: previousOnly,
+        );
+        await fixture.insertTransaction(
+          amount: 10,
+          type: 'expense',
+          date: currentDate,
+          categoryId: both,
+        );
+        await fixture.insertTransaction(
+          amount: 5,
+          type: 'expense',
+          date: previousDate,
+          categoryId: both,
+        );
+        await fixture.insertTransaction(
+          amount: 1,
+          type: 'expense',
+          date: currentDate,
+          categoryId: low,
+        );
+        await fixture.insertTransaction(
+          amount: 50,
+          type: 'expense',
+          date: previousDate,
+          categoryId: low,
+        );
+
+        final response = await fixture.call(overview_route.onRequest);
+        final data = response['data'] as Map<String, dynamic>;
+        final drivers = data['drivers'] as List<dynamic>;
+
+        expect(
+          drivers.map(
+            (driver) => (driver as Map<String, dynamic>)['category_id'],
+          ),
+          [previousOnly, fixture.categoryId, low],
+        );
+        expect(drivers, hasLength(3));
+      } finally {
+        await fixture.close();
+      }
+    },
+    skip: _skipDbTest,
+  );
 }
 
 class _Fixture {
@@ -156,6 +222,7 @@ class _Fixture {
     required num amount,
     required String type,
     required DateTime date,
+    String? categoryId,
   }) => pool.execute(
     Sql.named('''
         INSERT INTO transactions (id, user_id, type, category_id, amount, date)
@@ -165,11 +232,23 @@ class _Fixture {
       'id': const Uuid().v4(),
       'user': userId,
       'type': type,
-      'category': categoryId,
+      'category': categoryId ?? this.categoryId,
       'amount': amount,
       'date': date,
     },
   );
+
+  Future<String> insertCategory(String name) async {
+    final id = const Uuid().v4();
+    await pool.execute(
+      Sql.named('''
+      INSERT INTO categories (id, user_id, name, type, status, origin)
+      VALUES (@id, @user, @name, 'expense', 'active', 'user_created')
+    '''),
+      parameters: {'id': id, 'user': userId, 'name': name},
+    );
+    return id;
+  }
 
   Future<Map<String, dynamic>> call(
     FutureOr<Response> Function(RequestContext) handler,

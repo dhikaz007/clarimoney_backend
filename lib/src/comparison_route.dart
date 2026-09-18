@@ -116,12 +116,12 @@ Future<Map<String, dynamic>> fetchComparison({
       SELECT c.id, c.name,
         SUM(t.amount) FILTER (WHERE t.date >= @currentStart AND t.date < @currentEnd),
         SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd),
-        SUM(t.amount) FILTER (WHERE t.date >= @currentStart AND t.date < @currentEnd)
-          - SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd),
-        CASE WHEN SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd) = 0 THEN NULL
-          ELSE (SUM(t.amount) FILTER (WHERE t.date >= @currentStart AND t.date < @currentEnd)
-            - SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd))
-            / SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd) * 100 END
+         COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @currentStart AND t.date < @currentEnd), 0)
+           - COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd), 0),
+         CASE WHEN COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd), 0) = 0 THEN NULL
+           ELSE (COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @currentStart AND t.date < @currentEnd), 0)
+             - COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd), 0))
+             / COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd), 0) * 100 END
       FROM categories c
       LEFT JOIN transactions t ON t.category_id = c.id
         AND t.user_id = @userId
