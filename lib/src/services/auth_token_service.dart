@@ -36,6 +36,29 @@ class AuthTokenService {
     return AuthTokenIssue(token: token, expiresAt: expiresAt);
   }
 
+  Future<AuthTokenIssue> issueInTransaction(
+    Session session,
+    String userId,
+    String purpose,
+    Duration lifetime,
+  ) async {
+    final token = AuthTokenUtils.generate();
+    final expiresAt = DateTime.now().toUtc().add(lifetime);
+    await session.execute(
+      Sql.named('''INSERT INTO auth_tokens
+        (id, user_id, token_hash, purpose, expires_at)
+        VALUES (@id, @user_id, @token_hash, @purpose, @expires_at)'''),
+      parameters: {
+        'id': _uuid.v4(),
+        'user_id': userId,
+        'token_hash': AuthTokenUtils.hash(token),
+        'purpose': purpose,
+        'expires_at': expiresAt,
+      },
+    );
+    return AuthTokenIssue(token: token, expiresAt: expiresAt);
+  }
+
   Future<String?> consume(String token, String purpose) async {
     final result = await _pool.runTx((session) async {
       final rows = await session.execute(

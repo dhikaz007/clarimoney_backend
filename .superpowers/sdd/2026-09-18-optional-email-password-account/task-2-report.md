@@ -28,6 +28,15 @@ Database:
 - No migration added. Migration 007 already provides `users.email_verified_at` and `auth_tokens`.
 - Neon migration was applied during Task 1.
 
+Review follow-up:
+
+- Resend now locks user row and atomically invalidates prior tokens plus issues one new token.
+- Concurrent resends leave one valid token.
+- Email delivery runs after token transaction commit. Delivery failure marks newly issued token used, leaving no valid token until next resend.
+- Resend accepts injectable `EmailService`; tests use fake successful and failing senders.
+- Added login-before-verification, successful resend, SMTP failure, concurrent resend, invalid token, and middleware ownership tests.
+- Expanded API docs for profile, resend, verify, SMTP requirements, and failure behavior.
+
 Commit: pending.
 
 Concerns:

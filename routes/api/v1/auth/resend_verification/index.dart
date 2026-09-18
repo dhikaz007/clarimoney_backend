@@ -4,6 +4,7 @@ import 'package:clarimoney_backend/src/api_response.dart';
 import 'package:clarimoney_backend/src/auth_middleware.dart';
 import 'package:clarimoney_backend/src/services/auth_token_service.dart';
 import 'package:clarimoney_backend/src/services/email_service.dart';
+import 'package:clarimoney_backend/src/utils/auth_token_utils.dart';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:postgres/postgres.dart';
 
@@ -17,36 +18,54 @@ Future<Response> onRequest(RequestContext context) async {
   try {
     final userId = context.read<AuthSession>().userId;
     final pool = context.read<Pool<dynamic>>();
-    final rows = await pool.execute(
-      Sql.named(
-        '''SELECT email, email_verified_at FROM users WHERE id = @id''',
-      ),
-      parameters: {'id': userId},
-    );
-    if (rows.isEmpty) {
-      return apiResponse(
-        statusCode: HttpStatus.unauthorized,
-        message: 'Token expired or invalid',
+    final emailService = _emailService(context);
+    AuthTokenIssue? issued;
+    String? email;
+    await pool.runTx((transaction) async {
+      final rows = await transaction.execute(
+        Sql.named('''SELECT email, email_verified_at FROM users
+          WHERE id = @id FOR UPDATE'''),
+        parameters: {'id': userId},
       );
-    }
-    if (rows.first[1] == null) {
-      await pool.execute(
+      if (rows.isEmpty) throw _InvalidUserException();
+      if (rows.first[1] != null) return;
+      email = rows.first[0] as String;
+      await transaction.execute(
         Sql.named('''UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP
           WHERE user_id = @user_id AND purpose = 'email_verification'
             AND used_at IS NULL'''),
         parameters: {'user_id': userId},
       );
-      final issued = await AuthTokenService(
-        pool,
-      ).issue(userId, 'email_verification', const Duration(hours: 24));
-      await EmailService().sendVerification(
-        email: rows.first[0] as String,
-        token: issued.token,
+      issued = await AuthTokenService(pool).issueInTransaction(
+        transaction,
+        userId,
+        'email_verification',
+        const Duration(hours: 24),
       );
+    });
+    if (issued != null) {
+      try {
+        await emailService.sendVerification(
+          email: email!,
+          token: issued!.token,
+        );
+      } on Object {
+        await pool.execute(
+          Sql.named('''UPDATE auth_tokens SET used_at = CURRENT_TIMESTAMP
+            WHERE token_hash = @hash AND used_at IS NULL'''),
+          parameters: {'hash': AuthTokenUtils.hash(issued!.token)},
+        );
+        rethrow;
+      }
     }
     return apiResponse(
       statusCode: HttpStatus.ok,
       message: 'If email is unverified, verification instructions were sent',
+    );
+  } on _InvalidUserException {
+    return apiResponse(
+      statusCode: HttpStatus.unauthorized,
+      message: 'Token expired or invalid',
     );
   } on EmailConfigurationException catch (_) {
     return apiResponse(
@@ -63,5 +82,15 @@ Future<Response> onRequest(RequestContext context) async {
       statusCode: HttpStatus.internalServerError,
       message: 'Verification request failed',
     );
+  }
+}
+
+class _InvalidUserException implements Exception {}
+
+EmailService _emailService(RequestContext context) {
+  try {
+    return context.read<EmailService>();
+  } on Object {
+    return EmailService();
   }
 }

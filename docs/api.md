@@ -54,6 +54,9 @@ Protected auth:
 - `GET /api/v1/auth/me`
 - `POST /api/v1/auth/resend-verification`
 
+Email verification remains optional. Registration and login succeed before
+verification.
+
 Protected:
 
 - Categories.
@@ -202,6 +205,83 @@ Missing or invalid `device_id` returns `400` with message
 `device_id must be a non-empty string of 255 characters or fewer`.
 Non-string `device_name` returns `400` with message
 `device_name must be a string`.
+
+### `GET /api/v1/auth/me`
+
+Requires JWT. Returns current profile state:
+
+```json
+{
+  "status_code": 200,
+  "message": "Profile fetched successfully",
+  "data": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "email_verified": false
+  }
+}
+```
+
+### `POST /api/v1/auth/resend-verification`
+
+Requires JWT. Sends a 24-hour verification link for unverified accounts.
+Prior unused verification tokens become invalid. Verified accounts return the
+same generic success response without sending mail.
+
+Success `200`:
+
+```json
+{
+  "status_code": 200,
+  "message": "If email is unverified, verification instructions were sent",
+  "data": null
+}
+```
+
+Missing or failed SMTP configuration returns `500`:
+
+```json
+{
+  "status_code": 500,
+  "message": "Verification email unavailable",
+  "data": null
+}
+```
+
+Token issuance commits before delivery. Failed delivery invalidates newly
+issued token, leaving no valid verification token until next resend.
+
+### `POST /api/v1/auth/verify-email`
+
+Public. Request:
+
+```json
+{ "token": "opaque-verification-token" }
+```
+
+Success `200` marks email verified and consumes token:
+
+```json
+{
+  "status_code": 200,
+  "message": "Email verified successfully",
+  "data": { "email_verified": true }
+}
+```
+
+Invalid, expired, or reused token returns generic `400`:
+
+```json
+{
+  "status_code": 400,
+  "message": "Invalid or expired verification token",
+  "data": null
+}
+```
+
+SMTP configuration uses `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`,
+`SMTP_PASSWORD`, `SMTP_FROM`, and `APP_BASE_URL`. Credentials stay outside
+committed files. Gmail requires an App Password.
 
 ## Categories API
 
