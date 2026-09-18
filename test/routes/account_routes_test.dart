@@ -19,7 +19,7 @@ void main() {
     final userId = const Uuid().v4();
     try {
       await _insertUser(pool, userId);
-      await _insertRelatedData(pool, userId);
+      final historyHash = await _insertRelatedData(pool, userId);
 
       final response = await _delete(pool, userId, 'password123');
 
@@ -29,7 +29,7 @@ void main() {
       expect(await _count(pool, 'transactions', userId), 0);
       expect(await _count(pool, 'user_sessions', userId), 0);
       expect(await _count(pool, 'auth_tokens', userId), 0);
-      expect(await _countHistory(pool, userId), 0);
+      expect(await _countHistory(pool, historyHash), 0);
     } finally {
       await _deleteUser(pool, userId);
       await pool.close();
@@ -123,9 +123,10 @@ Future<void> _insertUser(Pool<dynamic> pool, String userId) => pool.execute(
   },
 );
 
-Future<void> _insertRelatedData(Pool<dynamic> pool, String userId) async {
+Future<String> _insertRelatedData(Pool<dynamic> pool, String userId) async {
   final categoryId = const Uuid().v4();
   final sessionId = const Uuid().v4();
+  final historyHash = AuthTokenUtils.hash(AuthTokenUtils.generate());
   await pool.execute(
     Sql.named('''INSERT INTO categories (id, user_id, name, type)
       VALUES (@id, @user_id, 'Test', 'expense')'''),
@@ -171,10 +172,11 @@ Future<void> _insertRelatedData(Pool<dynamic> pool, String userId) async {
       (token_hash, session_id, expires_at)
       VALUES (@hash, @session_id, CURRENT_TIMESTAMP + INTERVAL '1 day')'''),
     parameters: {
-      'hash': AuthTokenUtils.hash(AuthTokenUtils.generate()),
+      'hash': historyHash,
       'session_id': sessionId,
     },
   );
+  return historyHash;
 }
 
 Future<int> _count(Pool<dynamic> pool, String table, String userId) async {
@@ -187,12 +189,11 @@ Future<int> _count(Pool<dynamic> pool, String table, String userId) async {
   return rows.single[0] as int;
 }
 
-Future<int> _countHistory(Pool<dynamic> pool, String userId) async {
+Future<int> _countHistory(Pool<dynamic> pool, String historyHash) async {
   final rows = await pool.execute(
-    Sql.named('''SELECT COUNT(*) FROM refresh_token_history h
-      JOIN user_sessions s ON s.id = h.session_id
-      WHERE s.user_id = @id'''),
-    parameters: {'id': userId},
+    Sql.named('''SELECT COUNT(*) FROM refresh_token_history
+      WHERE token_hash = @hash'''),
+    parameters: {'hash': historyHash},
   );
   return rows.single[0] as int;
 }

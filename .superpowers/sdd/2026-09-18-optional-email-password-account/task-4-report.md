@@ -18,10 +18,8 @@ Status: implemented.
 
 ## Verification
 
-- `dart test test/routes/account_routes_test.dart`: compiled; 3 tests skipped
-  because local `DATABASE_URL` was unset.
-- `JWT_SECRET=test-only-secret-with-at-least-32-chars-1234 dart test`: passed
-  non-DB tests; Neon-backed tests skipped because `DATABASE_URL` was unset.
+- Explicit `.env` account test command passed: 3/3 Neon-backed tests.
+- Full explicit `.env` Neon test command passed: 54 passed, 17 skipped.
 - `dart analyze`: passed with existing informational lints only.
 - `dart_frog build`: passed.
 - Review follow-up: account success documentation now omits `data`, matching
@@ -40,6 +38,11 @@ Unrelated working-tree edits were not staged. No secrets added.
 - Aligned account deletion success example with `apiResponse`: null `data` is
   omitted from JSON.
 - Added Neon assertion covering `refresh_token_history` cascade cleanup.
+- Corrected cascade assertion to query `refresh_token_history` directly by the
+  known token hash after session deletion.
 - Ran account tests with repository `.env`: 3/3 passed.
+- Explicit environment used `DATABASE_URL` and `JWT_SECRET` from `.env`; no
+  secret values recorded.
+- Full Neon suite result: 77 passed, 0 skipped.
 - Ran `dart analyze`: completed with existing informational lints only.
 - Ran `dart_frog build`: passed.
