@@ -1,8 +1,6 @@
 import 'package:clarimoney_backend/src/comparison_calculation.dart';
+import 'package:clarimoney_backend/src/transaction_validation.dart';
 import 'package:postgres/postgres.dart';
-
-num? _net(num? income, num? expense) =>
-    income == null || expense == null ? null : income - expense;
 
 num? parseComparisonNumeric(Object? value) {
   if (value == null) return null;
@@ -13,30 +11,8 @@ num? parseComparisonNumeric(Object? value) {
   return number;
 }
 
-Object? _jsonNumeric(Object? value) {
-  if (value == null) return null;
-  final text = value.toString().trim();
-  final normalized = text.replaceFirst(RegExp(r'^(-?)0+(?=\d)'), r'$1');
-  final integer = BigInt.tryParse(normalized);
-  if (integer != null &&
-      integer >= BigInt.from(-9007199254740991) &&
-      integer <= BigInt.from(9007199254740991)) {
-    return integer.toInt();
-  }
-  final number = num.tryParse(normalized);
-  return number != null && number.isFinite && number.toString() == normalized
-      ? number
-      : normalized;
-}
-
 String comparisonIso(DateTime value) =>
     '${value.toUtc().toIso8601String().split('.').first}.000Z';
-
-Map<String, dynamic> _withSides(
-  Map<String, dynamic> value,
-  num? current,
-  num? previous,
-) => {...value, 'current': current, 'previous': previous};
 
 Map<String, dynamic> comparisonPeriods({
   required DateTime currentStart,
@@ -188,24 +164,24 @@ Future<Map<String, dynamic>> fetchComparison({
     ),
   );
   result.income
-    ..['value'] = _jsonNumeric(total[0])
-    ..['absolute_change'] = _jsonNumeric(total[6])
-    ..['percentage_change'] = _jsonNumeric(total[8]);
+    ..['value'] = comparisonJsonNumeric(total[0])
+    ..['absolute_change'] = comparisonJsonNumeric(total[6])
+    ..['percentage_change'] = comparisonJsonNumeric(total[8]);
   result.expense
-    ..['value'] = _jsonNumeric(total[2])
-    ..['absolute_change'] = _jsonNumeric(total[7])
-    ..['percentage_change'] = _jsonNumeric(total[9]);
+    ..['value'] = comparisonJsonNumeric(total[2])
+    ..['absolute_change'] = comparisonJsonNumeric(total[7])
+    ..['percentage_change'] = comparisonJsonNumeric(total[9]);
   result.netCashFlow
-    ..['value'] = _jsonNumeric(total[4])
-    ..['absolute_change'] = _jsonNumeric(total[10])
-    ..['percentage_change'] = _jsonNumeric(total[11]);
+    ..['value'] = comparisonJsonNumeric(total[4])
+    ..['absolute_change'] = comparisonJsonNumeric(total[10])
+    ..['percentage_change'] = comparisonJsonNumeric(total[11]);
   for (final row in categories) {
     final item = result.categories[row[0].toString()];
     if (item == null) continue;
     item
-      ..['value'] = _jsonNumeric(row[2])
-      ..['absolute_change'] = _jsonNumeric(row[4])
-      ..['percentage_change'] = _jsonNumeric(row[5]);
+      ..['value'] = comparisonJsonNumeric(row[2])
+      ..['absolute_change'] = comparisonJsonNumeric(row[4])
+      ..['percentage_change'] = comparisonJsonNumeric(row[5]);
   }
   result.drivers
     ..clear()
@@ -215,8 +191,8 @@ Future<Map<String, dynamic>> fetchComparison({
         return <String, dynamic>{...item};
       }),
     );
-  result.netCashFlow['current'] = _jsonNumeric(total[4]);
-  result.netCashFlow['previous'] = _jsonNumeric(total[5]);
+  result.netCashFlow['current'] = comparisonJsonNumeric(total[4]);
+  result.netCashFlow['previous'] = comparisonJsonNumeric(total[5]);
   final periods = comparisonPeriods(
     currentStart: currentStart,
     currentEnd: currentEnd,
@@ -230,17 +206,21 @@ Future<Map<String, dynamic>> fetchComparison({
           'name': categoryName,
           ...compareValue(current: null, previous: null),
         };
-    final currentCategory = currentCategories[categoryId];
-    final previousCategory = previousCategories[categoryId];
+    final row = categories.cast<List<dynamic>?>().firstWhere(
+      (value) => value?[0].toString() == categoryId,
+      orElse: () => null,
+    );
     return {
       'period': period,
       'periods': periods,
       'category_id': category['category_id'],
       'name': category['name'],
-      'current': _jsonNumeric(currentCategory?.value),
-      'previous': _jsonNumeric(previousCategory?.value),
-      'absolute_change': category['absolute_change'],
-      'percentage_change': category['percentage_change'],
+      'current': comparisonJsonNumeric(_categoryRaw(categories, categoryId, 2)),
+      'previous': comparisonJsonNumeric(
+        _categoryRaw(categories, categoryId, 3),
+      ),
+      'absolute_change': comparisonJsonNumeric(row?[4]),
+      'percentage_change': comparisonJsonNumeric(row?[5]),
     };
   }
   return {
@@ -248,39 +228,50 @@ Future<Map<String, dynamic>> fetchComparison({
     'periods': periods,
     'income': {
       ...result.income,
-      'current': _jsonNumeric(total[0]),
-      'previous': _jsonNumeric(total[1]),
+      'current': comparisonJsonNumeric(total[0]),
+      'previous': comparisonJsonNumeric(total[1]),
     },
     'expense': {
       ...result.expense,
-      'current': _jsonNumeric(total[2]),
-      'previous': _jsonNumeric(total[3]),
+      'current': comparisonJsonNumeric(total[2]),
+      'previous': comparisonJsonNumeric(total[3]),
     },
     'net_cash_flow': {
       ...result.netCashFlow,
-      'current': _jsonNumeric(total[4]),
-      'previous': _jsonNumeric(total[5]),
+      'current': comparisonJsonNumeric(total[4]),
+      'previous': comparisonJsonNumeric(total[5]),
     },
     'categories': {
       for (final entry in result.categories.entries)
         entry.key: {
           ...entry.value,
-          'current': _jsonNumeric(currentCategories[entry.key]?.value),
-          'previous': _jsonNumeric(previousCategories[entry.key]?.value),
+          'current': comparisonJsonNumeric(
+            _categoryRaw(categories, entry.key, 2),
+          ),
+          'previous': comparisonJsonNumeric(
+            _categoryRaw(categories, entry.key, 3),
+          ),
         },
     },
     'drivers': result.drivers
         .map(
           (driver) => {
             ...driver,
-            'current': _jsonNumeric(
-              currentCategories[driver['category_id']]?.value,
+            'current': comparisonJsonNumeric(
+              _categoryRaw(categories, driver['category_id'] as String, 2),
             ),
-            'previous': _jsonNumeric(
-              previousCategories[driver['category_id']]?.value,
+            'previous': comparisonJsonNumeric(
+              _categoryRaw(categories, driver['category_id'] as String, 3),
             ),
           },
         )
         .toList(),
   };
+}
+
+Object? _categoryRaw(Iterable<List<dynamic>> rows, String id, int index) {
+  for (final row in rows) {
+    if (row[0].toString() == id) return row[index];
+  }
+  return null;
 }

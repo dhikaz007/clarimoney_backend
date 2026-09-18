@@ -24,6 +24,23 @@ void main() {
   });
 
   test(
+    'category comparison rejects malformed UUID before database access',
+    () async {
+      final request = TestRequestContext(
+        path: '/api/v1/categories/not-a-uuid/comparison?period=this_month',
+        method: HttpMethod.get,
+      );
+      expect(
+        (await category_route.onRequest(
+          request.context,
+          'not-a-uuid',
+        )).statusCode,
+        HttpStatus.badRequest,
+      );
+    },
+  );
+
+  test(
     'comparison routes return full ranges and persistent category identity',
     () async {
       final fixture = await _Fixture.create();

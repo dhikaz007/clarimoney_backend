@@ -140,7 +140,14 @@ FutureOr<Response> onRequest(RequestContext context) async {
 
   if (method == HttpMethod.post) {
     try {
-      final body = decodeObject(await context.request.body());
+      final rawBody = await context.request.body();
+      if (hasScientificAmountLiteral(rawBody)) {
+        return apiResponse(
+          statusCode: HttpStatus.badRequest,
+          message: 'Invalid amount',
+        );
+      }
+      final body = decodeObject(rawBody);
       final userId = context.read<String>();
       final pool = context.read<Pool<dynamic>>();
       final categoryId = body['category_id'] as String?;
@@ -154,6 +161,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
 
       if (!_validAmount(amount) ||
           categoryId == null ||
+          !validUuid(categoryId) ||
           dateRaw == null ||
           (type != 'income' && type != 'expense')) {
         return apiResponse(
@@ -243,11 +251,6 @@ FutureOr<Response> onRequest(RequestContext context) async {
 
 String? _note(Object? value) => trimmedNote(value);
 
-bool _validAmount(num? value) =>
-    value != null &&
-    value > 0 &&
-    value.isFinite &&
-    !value.toString().contains('e') &&
-    (value.toString().split('.').elementAtOrNull(1)?.length ?? 0) <= 2;
+bool _validAmount(num? value) => validTransactionAmount(value);
 String? _iso(Object? value) =>
     value is DateTime ? value.toUtc().toIso8601String() : null;

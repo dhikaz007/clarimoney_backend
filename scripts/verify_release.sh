@@ -6,6 +6,30 @@ if [[ "$ALLOW_RELEASE_DB_MUTATION" != true ]]; then
   printf '%s\n' 'Release verification refused: ALLOW_RELEASE_DB_MUTATION=true required for disposable database.' >&2
   exit 1
 fi
+normalize_db_url() {
+  python3 - "$1" <<'PY'
+import sys
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+u = urlsplit(sys.argv[1])
+q = sorted((k, v) for k, v in parse_qsl(u.query) if k != 'channel_binding')
+print(urlunsplit((u.scheme.lower(), u.netloc.lower(), u.path.rstrip('/'), urlencode(q), '')))
+PY
+}
+release_url="$(normalize_db_url "$RELEASE_VERIFY_DATABASE_URL")"
+if [[ -n "${DATABASE_URL:-}" ]] && [[ "$release_url" == "$(normalize_db_url "$DATABASE_URL")" ]]; then
+  printf '%s\n' 'Release verification refused: disposable URL matches DATABASE_URL.' >&2
+  exit 1
+fi
+release_host="$(python3 - "$RELEASE_VERIFY_DATABASE_URL" <<'PY'
+import sys
+from urllib.parse import urlsplit
+print((urlsplit(sys.argv[1]).hostname or '').lower())
+PY
+)"
+if [[ "$release_host" == *neon.tech || "$release_host" == *onrender.com || "$release_host" == *render.com ]] && [[ "${RELEASE_VERIFY_DISPOSABLE:-}" != true ]]; then
+  printf '%s\n' 'Release verification refused: production-like host requires RELEASE_VERIFY_DISPOSABLE=true.' >&2
+  exit 1
+fi
 DATABASE_URL="$RELEASE_VERIFY_DATABASE_URL"
 : "${JWT_SECRET:?JWT_SECRET is required}"
 if [[ "$DATABASE_URL" == *'channel_binding='* ]]; then

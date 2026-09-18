@@ -2,12 +2,23 @@ import 'package:test/test.dart';
 
 import 'package:clarimoney_backend/src/comparison_calculation.dart';
 import 'package:clarimoney_backend/src/comparison_route.dart';
+import 'package:clarimoney_backend/src/transaction_validation.dart';
+import 'package:clarimoney_backend/src/transaction_validation.dart';
 
 void main() {
   test('parses PostgreSQL numeric aggregates safely', () {
     expect(parseComparisonNumeric('12.50'), 12.50);
     expect(parseComparisonNumeric(null), isNull);
     expect(() => parseComparisonNumeric('NaN'), throwsFormatException);
+  });
+
+  test('preserves PostgreSQL decimal strings and safe integer JSON values', () {
+    expect(
+      comparisonJsonNumeric('12345678901234567890.01'),
+      '12345678901234567890.01',
+    );
+    expect(comparisonJsonNumeric('12.50'), '12.50');
+    expect(comparisonJsonNumeric('12'), 12);
   });
   test('derives previous full month', () {
     final period = deriveComparisonPeriod(

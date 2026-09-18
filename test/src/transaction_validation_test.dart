@@ -25,4 +25,22 @@ void main() {
   test('escapes LIKE wildcard characters', () {
     expect(escapeLike(r'100%_done\'), r'100\%\_done\\');
   });
+
+  test('accepts only positive amounts with at most two decimal places', () {
+    expect(validTransactionAmount(0.01), isTrue);
+    expect(validTransactionAmount(9999999999999.99), isTrue);
+    expect(validTransactionAmount(1.001), isFalse);
+    expect(validTransactionAmount(0), isFalse);
+    expect(validTransactionAmount(-1), isFalse);
+  });
+
+  test('rejects scientific amount literals before JSON numeric conversion', () {
+    expect(hasScientificAmountLiteral('{"amount":1e2}'), isTrue);
+    expect(hasScientificAmountLiteral('{"amount":1.00}'), isFalse);
+  });
+
+  test('validates UUID shape', () {
+    expect(validUuid('00000000-0000-4000-8000-000000000001'), isTrue);
+    expect(validUuid('not-a-uuid'), isFalse);
+  });
 }

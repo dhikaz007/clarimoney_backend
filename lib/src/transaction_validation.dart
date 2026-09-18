@@ -32,3 +32,27 @@ String escapeLike(String value) =>
 bool validUuid(String value) => RegExp(
   r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$',
 ).hasMatch(value);
+
+bool validTransactionAmount(num? value) =>
+    value != null &&
+    value > 0 &&
+    value.isFinite &&
+    !value.toString().contains('e') &&
+    (value.toString().split('.').elementAtOrNull(1)?.length ?? 0) <= 2;
+
+bool hasScientificAmountLiteral(String body) => RegExp(
+  r'"amount"\s*:\s*[-+]?(?:\d+\.?\d*|\.\d+)[eE][+-]?\d+',
+).hasMatch(body);
+
+Object? comparisonJsonNumeric(Object? value) {
+  if (value == null) return null;
+  final text = value.toString().trim();
+  final normalized = text.replaceFirst(RegExp(r'^(-?)0+(?=\d)'), r'$1');
+  final integer = BigInt.tryParse(normalized);
+  if (integer != null &&
+      integer >= BigInt.from(-9007199254740991) &&
+      integer <= BigInt.from(9007199254740991)) {
+    return integer.toInt();
+  }
+  return normalized;
+}

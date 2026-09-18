@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:clarimoney_backend/src/api_response.dart';
 import 'package:clarimoney_backend/src/comparison_route.dart';
+import 'package:clarimoney_backend/src/transaction_validation.dart';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:postgres/postgres.dart';
 
@@ -10,6 +11,12 @@ FutureOr<Response> onRequest(RequestContext context, String id) async {
     return apiResponse(
       statusCode: HttpStatus.methodNotAllowed,
       message: 'Method not allowed',
+    );
+  }
+  if (!validUuid(id)) {
+    return apiResponse(
+      statusCode: HttpStatus.badRequest,
+      message: 'Invalid category id',
     );
   }
   final period = context.request.uri.queryParameters['period'] ?? 'this_month';

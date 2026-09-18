@@ -67,4 +67,87 @@ void main() {
       },
     );
   }
+
+  test(
+    'transaction create rejects malformed category UUID before database access',
+    () async {
+      final request = TestRequestContext(
+        path: '/api/v1/transactions',
+        method: HttpMethod.post,
+        body: jsonEncode({
+          'category_id': 'bad',
+          'amount': 1.00,
+          'date': '2026-09-15T08:30:00.000Z',
+        }),
+      );
+      expect(
+        (await transactions.onRequest(request.context)).statusCode,
+        HttpStatus.badRequest,
+      );
+    },
+  );
+
+  test('transaction create rejects three decimal amount', () async {
+    final request = TestRequestContext(
+      path: '/api/v1/transactions',
+      method: HttpMethod.post,
+      body: jsonEncode({
+        'category_id': '00000000-0000-4000-8000-000000000001',
+        'amount': 1.001,
+        'date': '2026-09-15T08:30:00.000Z',
+      }),
+    );
+    expect(
+      (await transactions.onRequest(request.context)).statusCode,
+      HttpStatus.badRequest,
+    );
+  });
+
+  test('transaction create rejects scientific amount', () async {
+    final request = TestRequestContext(
+      path: '/api/v1/transactions',
+      method: HttpMethod.post,
+      body:
+          '{"category_id":"00000000-0000-4000-8000-000000000001","amount":1e2,"date":"2026-09-15T08:30:00.000Z"}',
+    );
+    expect(
+      (await transactions.onRequest(request.context)).statusCode,
+      HttpStatus.badRequest,
+    );
+  });
+
+  test('transaction update rejects three decimal amount', () async {
+    final request = TestRequestContext(
+      path: '/api/v1/transactions/00000000-0000-4000-8000-000000000001',
+      method: HttpMethod.put,
+      body: jsonEncode({
+        'category_id': '00000000-0000-4000-8000-000000000001',
+        'amount': 1.001,
+        'date': '2026-09-15T08:30:00.000Z',
+      }),
+    );
+    expect(
+      (await transaction_detail.onRequest(
+        request.context,
+        '00000000-0000-4000-8000-000000000001',
+      )).statusCode,
+      HttpStatus.badRequest,
+    );
+  });
+
+  test('transaction update rejects scientific amount', () async {
+    final request = TestRequestContext(
+      path: '/api/v1/transactions/00000000-0000-4000-8000-000000000001',
+      method: HttpMethod.put,
+      body:
+          '{"category_id":"00000000-0000-4000-8000-000000000001","amount":1e2,"date":"2026-09-15T08:30:00.000Z"}',
+    );
+    expect(
+      (await transaction_detail.onRequest(
+        request.context,
+        '00000000-0000-4000-8000-000000000001',
+      )).statusCode,
+      HttpStatus.badRequest,
+    );
+  });
 }
