@@ -45,7 +45,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
         message: 'device_name must be a string',
       );
     }
-    if (deviceName != null && deviceName.length > 255) {
+    if (deviceName != null && deviceName.runes.length > 255) {
       return apiResponse(
         statusCode: HttpStatus.badRequest,
         message: 'device_name must be 255 characters or fewer',

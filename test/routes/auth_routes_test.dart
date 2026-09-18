@@ -172,6 +172,25 @@ void main() {
     });
   }
 
+  for (final route in ['register', 'login']) {
+    test('$route accepts 255 emoji device name', () async {
+      final request = TestRequestContext(
+        path: '/api/v1/auth/$route',
+        method: HttpMethod.post,
+        body: jsonEncode({
+          'email': 'user@example.com',
+          'password': 'password123',
+          'device_id': 'device-id',
+          'device_name': '😀' * 255,
+        }),
+      );
+      final response = route == 'register'
+          ? await register.onRequest(request.context)
+          : await login.onRequest(request.context);
+      expect(response.statusCode, isNot(HttpStatus.badRequest));
+    });
+  }
+
   test('register returns session response fields', () async {
     final pool = _pool();
     final userId = const Uuid().v4();
@@ -235,7 +254,7 @@ void main() {
     }
   }, skip: _skipDbTest);
 
-  test('register rejects oversized device name before creating user', () async {
+  test('register rolls back user when session creation fails', () async {
     final pool = _pool();
     final userId = const Uuid().v4();
     final email = '$userId@example.com';
@@ -247,12 +266,12 @@ void main() {
           'email': email,
           'password': 'password123',
           'device_id': userId,
-          'device_name': 'x' * 256,
+          'device_name': '\u0000',
         }),
       );
       final response = await register.onRequest(_withPool(request, pool));
 
-      expect(response.statusCode, HttpStatus.badRequest);
+      expect(response.statusCode, HttpStatus.internalServerError);
       expect(
         await pool.execute(
           Sql.named('SELECT id FROM users WHERE id = @id'),
