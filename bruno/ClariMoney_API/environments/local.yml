@@ -49,3 +49,6 @@ variables:
   - name: email_verified
     value: "false"
     description: Updated by the Me request response script.
+  - name: current_password
+    value: ""
+    description: Required for account deletion. Set locally only after manual confirmation; never commit a password.

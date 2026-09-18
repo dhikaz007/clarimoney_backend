@@ -43,6 +43,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/008_drop_redundant_auth_to
 dart format --output=none --set-exit-if-changed .
 dart analyze
  JWT_SECRET="${JWT_SECRET:?export JWT_SECRET or load a shell-compatible .env}" dart test
+ DATABASE_URL="${DATABASE_URL:?export DATABASE_URL}" JWT_SECRET="${JWT_SECRET:?export JWT_SECRET}" ./scripts/verify_release.sh
 dart_frog build
 ```
 
@@ -60,6 +61,7 @@ Production requirements:
 Test policy:
 - Run `JWT_SECRET="${JWT_SECRET:?export JWT_SECRET}" DATABASE_URL="${DATABASE_URL:?export DATABASE_URL}" dart test` for full Neon-backed verification. Load `.env` with a dotenv tool first; `.env` URLs may contain shell metacharacters.
 - DB tests may skip only when `DATABASE_URL` or `JWT_SECRET` is absent in local development; release and CI runs must provide both and must not accept skipped DB tests.
+- Release gate: `./scripts/verify_release.sh` requires both variables and fails when tests skip.
 - Migration 006 must run after 004 and 005. It replaces the history foreign key
   so same-device session UUID replacement cascades to `refresh_token_history`.
 - Migrations assume clean ordered application. Existing objects are not repaired

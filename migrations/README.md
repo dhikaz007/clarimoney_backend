@@ -26,6 +26,22 @@ Migration 008 must run after migration 007. It safely removes the redundant
 the unique constraint on `auth_tokens.token_hash` preserves required lookup
 indexing. `DROP INDEX IF EXISTS` makes it safe for databases already corrected.
 
+Verify release schema state:
+
+```bash
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+SELECT to_regclass('public.auth_tokens') AS auth_tokens;
+SELECT 1 FROM information_schema.columns WHERE table_schema = 'public'
+  AND table_name = 'users' AND column_name = 'email_verified_at';
+SELECT 1 FROM pg_indexes WHERE schemaname = 'public'
+  AND tablename = 'auth_tokens' AND indexname = 'auth_tokens_token_hash_key';
+SELECT to_regclass('public.idx_auth_tokens_hash') AS removed_redundant_index;
+SQL
+```
+
+Expected: `auth_tokens` exists, required checks return `1`, and
+`removed_redundant_index` is empty. Check does not repair schema drift.
+
 ## Release environment
 
 Set these variables in the runtime environment. Keep values out of Git,

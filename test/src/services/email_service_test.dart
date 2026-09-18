@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clarimoney_backend/src/services/email_service.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
@@ -29,7 +31,7 @@ void main() {
 
   test('rejects invalid SMTP port before sending', () async {
     var sends = 0;
-    expect(
+    await expectLater(
       () => EmailService(
         environment: const {
           'APP_BASE_URL': 'https://app.example.com',
@@ -81,6 +83,23 @@ void main() {
         sender: (_, SmtpServer _) async => throw StateError('network'),
       ).sendPasswordReset(email: 'user@example.com', token: 'opaque-token'),
       throwsA(isA<EmailSendException>()),
+    );
+  });
+
+  test('times out SMTP delivery with a controlled error', () async {
+    expect(
+      EmailService(
+        environment: const {
+          'APP_BASE_URL': 'https://app.example.com',
+          'SMTP_HOST': 'smtp.example.com',
+          'SMTP_PORT': '587',
+          'SMTP_USERNAME': 'sender@example.com',
+          'SMTP_PASSWORD': 'app-password',
+          'SMTP_FROM': 'sender@example.com',
+        },
+        sender: (_, __) => Completer<void>().future,
+      ).sendPasswordReset(email: 'user@example.com', token: 'opaque-token'),
+      throwsA(isA<EmailSendTimeoutException>()),
     );
   });
 }

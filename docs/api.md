@@ -278,7 +278,8 @@ Verified accounts return success before SMTP validation and do not send mail.
 For unverified accounts, token issuance and delivery run within one database
 transaction. Invalid SMTP configuration is checked before token invalidation;
 existing tokens remain valid when configuration is missing or invalid. SMTP send
-failure rolls back token invalidation and issuance. SMTP cannot participate in
+failure or timeout rolls back token invalidation and issuance. SMTP delivery has
+a 10-second timeout. SMTP cannot participate in
 database commit: if mail delivery succeeds but database commit later fails,
 delivered link may be unusable; resend then issues a replacement.
 
@@ -341,6 +342,10 @@ remain indistinguishable through this endpoint.
 SMTP failure rolls back token invalidation and issuance. SMTP cannot participate
 in database commit: if delivery succeeds but commit later fails, delivered link
 may be unusable; another forgot-password request issues a replacement.
+
+Forgot-password responses use a 250 ms minimum duration, including missing-user
+and SMTP paths. SMTP latency remains observable up to the 10-second timeout;
+rate limiting is not implemented.
 
 ### `POST /api/v1/auth/reset-password`
 

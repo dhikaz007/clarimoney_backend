@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:mailer/mailer.dart';
@@ -19,7 +20,15 @@ class EmailSendException implements Exception {
   String toString() => message;
 }
 
+class EmailSendTimeoutException implements Exception {
+  EmailSendTimeoutException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
 class EmailService {
+  static const sendTimeout = Duration(seconds: 10);
   EmailService({Map<String, String>? environment, MailSender? sender})
     : _environment = environment ?? Platform.environment,
       _sender = sender ?? _send;
@@ -74,7 +83,9 @@ class EmailService {
       ..subject = subject
       ..text = '$heading:\n$link';
     try {
-      await _sender(message, config.server);
+      await _sender(message, config.server).timeout(sendTimeout);
+    } on TimeoutException {
+      throw EmailSendTimeoutException('Email delivery timed out');
     } catch (_) {
       throw EmailSendException('Unable to send email');
     }

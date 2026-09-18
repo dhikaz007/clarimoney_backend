@@ -66,6 +66,11 @@ Future<Response> onRequest(RequestContext context) async {
       statusCode: HttpStatus.internalServerError,
       message: 'Verification email unavailable',
     );
+  } on EmailSendTimeoutException catch (_) {
+    return apiResponse(
+      statusCode: HttpStatus.internalServerError,
+      message: 'Verification email unavailable',
+    );
   } catch (_) {
     return apiResponse(
       statusCode: HttpStatus.internalServerError,
