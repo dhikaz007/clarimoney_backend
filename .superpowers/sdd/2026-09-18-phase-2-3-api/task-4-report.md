@@ -16,12 +16,14 @@ Implemented pure comparison helpers in `lib/src/comparison_calculation.dart`:
 - Stable comparison keys always emit `value`, `absolute_change`, and `percentage_change`.
 - Zero-change categories excluded from drivers.
 - Precision policy: preserve raw numeric arithmetic; no rounding of values or percentages.
+- Derived non-finite sums, differences, and percentages become unavailable (`null`); category IDs sort before output.
 
-Tests added: `test/src/comparison_calculation_test.dart`, including review edge cases for rollover, DST, month lengths, cross-month ranges, non-finite values, invalid types, zero drivers, unavailable NCF, and decimals.
+Tests added: `test/src/comparison_calculation_test.dart`, including review edge cases for rollover, DST, month lengths, cross-month ranges, non-finite values, overflow arithmetic, invalid types, zero drivers, unavailable NCF, decimals, and deterministic ordering.
 
 Verification:
 
-- Focused comparison tests: passed, 15 tests.
+- Focused comparison tests: passed, 19 tests.
+- Full tests with valid ephemeral `JWT_SECRET`: passed, 72 tests; 48 skipped.
 - `dart analyze`: passed.
 - `dart_frog build`: passed.
 - `dart test`: comparison tests passed; 2 existing JWT tests failed because local `JWT_SECRET` is absent or shorter than required 32 characters. No comparison failures.

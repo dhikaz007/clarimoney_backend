@@ -251,4 +251,78 @@ void main() {
     expect(result['absolute_change'], closeTo(0.005, 0.000000001));
     expect(result['percentage_change'], closeTo(0.5, 0.000000001));
   });
+
+  test(
+    'returns unavailable changes when subtraction or percentage overflows',
+    () {
+      final result = compareValue(
+        current: double.maxFinite,
+        previous: -double.maxFinite,
+      );
+
+      expect(result, {
+        'value': double.maxFinite,
+        'absolute_change': null,
+        'percentage_change': null,
+      });
+    },
+  );
+
+  test('returns unavailable totals when aggregation overflows', () {
+    final totals = aggregatePeriod([
+      const ComparisonTransaction(
+        categoryId: 'x',
+        categoryName: 'X',
+        type: 'income',
+        amount: double.maxFinite,
+      ),
+      const ComparisonTransaction(
+        categoryId: 'x',
+        categoryName: 'X',
+        type: 'income',
+        amount: double.maxFinite,
+      ),
+    ]);
+
+    expect(totals.income, isNull);
+    expect(totals.categories['x']?.value, isNull);
+  });
+
+  test('returns unavailable NCF when subtraction overflows', () {
+    final current = PeriodTotals(
+      income: double.maxFinite,
+      expense: -double.maxFinite,
+      categories: const {},
+    );
+    final previous = PeriodTotals(income: 1, expense: 1, categories: const {});
+
+    expect(buildComparison(current: current, previous: previous).netCashFlow, {
+      'available': false,
+      'value': null,
+      'absolute_change': null,
+      'percentage_change': null,
+    });
+  });
+
+  test('sorts category output IDs deterministically', () {
+    final result = buildComparison(
+      current: aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'z',
+          categoryName: 'Z',
+          type: 'expense',
+          amount: 2,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'a',
+          categoryName: 'A',
+          type: 'expense',
+          amount: 1,
+        ),
+      ]),
+      previous: aggregatePeriod([]),
+    );
+
+    expect(result.categories.keys, ['a', 'z']);
+  });
 }

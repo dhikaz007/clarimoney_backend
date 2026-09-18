@@ -35,7 +35,7 @@ class CategoryTotal {
   const CategoryTotal({required this.name, required this.value});
 
   final String name;
-  final num value;
+  final num? value;
 }
 
 class ComparisonResult {
@@ -109,8 +109,12 @@ Map<String, dynamic> compareValue({
     return result;
   }
   final change = current - previous;
+  if (!change.isFinite) return result;
   result['absolute_change'] = change;
-  if (previous != 0) result['percentage_change'] = change / previous * 100;
+  if (previous != 0) {
+    final percentage = change / previous * 100;
+    if (percentage.isFinite) result['percentage_change'] = percentage;
+  }
   return result;
 }
 
@@ -123,16 +127,25 @@ PeriodTotals aggregatePeriod(Iterable<ComparisonTransaction> transactions) {
       throw ArgumentError('transaction amounts must be finite');
     }
     if (transaction.type == 'income') {
-      income = (income ?? 0) + transaction.amount;
+      final sum = income == null
+          ? transaction.amount
+          : income + transaction.amount;
+      income = sum.isFinite ? sum : null;
     } else if (transaction.type == 'expense') {
-      expense = (expense ?? 0) + transaction.amount;
+      final sum = expense == null
+          ? transaction.amount
+          : expense + transaction.amount;
+      expense = sum.isFinite ? sum : null;
     } else {
       continue;
     }
     final category = categories[transaction.categoryId];
+    final sum = category?.value == null
+        ? transaction.amount
+        : category!.value! + transaction.amount;
     categories[transaction.categoryId] = CategoryTotal(
       name: transaction.categoryName,
-      value: (category?.value ?? 0) + transaction.amount,
+      value: sum.isFinite ? sum : null,
     );
   }
   return PeriodTotals(income: income, expense: expense, categories: categories);
@@ -143,7 +156,8 @@ ComparisonResult buildComparison({
   required PeriodTotals previous,
 }) {
   final categories = <String, Map<String, dynamic>>{};
-  final ids = {...current.categories.keys, ...previous.categories.keys};
+  final ids = {...current.categories.keys, ...previous.categories.keys}.toList()
+    ..sort();
   for (final id in ids) {
     final currentCategory = current.categories[id];
     final previousCategory = previous.categories[id];
@@ -190,12 +204,8 @@ ComparisonResult buildComparison({
     driver.remove('_magnitude');
   }
 
-  final netCurrent = current.income != null && current.expense != null
-      ? current.income! - current.expense!
-      : null;
-  final netPrevious = previous.income != null && previous.expense != null
-      ? previous.income! - previous.expense!
-      : null;
+  final netCurrent = _safeDifference(current.income, current.expense);
+  final netPrevious = _safeDifference(previous.income, previous.expense);
   return ComparisonResult(
     income: compareValue(current: current.income, previous: previous.income),
     expense: compareValue(current: current.expense, previous: previous.expense),
@@ -206,4 +216,10 @@ ComparisonResult buildComparison({
     categories: categories,
     drivers: drivers.take(3).toList(),
   );
+}
+
+num? _safeDifference(num? left, num? right) {
+  if (left == null || right == null) return null;
+  final result = left - right;
+  return result.isFinite ? result : null;
 }
