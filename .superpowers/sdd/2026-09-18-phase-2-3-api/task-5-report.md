@@ -32,3 +32,4 @@ Complete. Review findings fixed across authenticated comparison overview, catego
 ## Commit
 
 - `a1e8006 fix: harden comparison API contracts`
+- `f354e22 fix: harden comparison numeric responses`
