@@ -14,6 +14,9 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Migration 009 preflight failed: categories contain blank, untrimmed, or overlong names';
   END IF;
+  IF EXISTS (SELECT 1 FROM transactions WHERE category_id IS NULL) THEN
+    RAISE EXCEPTION 'Migration 009 preflight failed: transactions require categories';
+  END IF;
 END $$;
 
 -- Preserve legacy timestamp wall-clock values as UTC. Skip recast after 009.
@@ -49,6 +52,9 @@ DROP TRIGGER IF EXISTS categories_identity_mutation_guard ON categories;
 CREATE TRIGGER categories_identity_mutation_guard
   BEFORE UPDATE OF type, user_id ON categories
   FOR EACH ROW EXECUTE FUNCTION prevent_category_identity_mutation();
+
+ALTER TABLE transactions
+  ALTER COLUMN category_id SET NOT NULL;
 
 INSERT INTO categories (id, user_id, name, icon, color, type, status, origin)
 VALUES

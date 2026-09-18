@@ -34,6 +34,10 @@ for required in \
   [[ "$sql" == *"$required"* ]] || { printf 'missing SQL: %s\n' "$required" >&2; exit 1; }
 done
 
+for required in "category_id set not null" "transactions require categories"; do
+  [[ "$corrective_sql" == *"$required"* ]] || { printf 'missing category requirement: %s\n' "$required" >&2; exit 1; }
+done
+
 for required in \
   'do $$' \
   "amount <= 0" \

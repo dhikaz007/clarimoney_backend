@@ -4,13 +4,14 @@ import 'package:dart_frog/dart_frog.dart';
 import 'package:postgres/postgres.dart';
 import 'package:uuid/uuid.dart';
 import 'package:clarimoney_backend/src/api_response.dart';
+import 'package:clarimoney_backend/src/transaction_validation.dart';
 
 FutureOr<Response> onRequest(RequestContext context) async {
   final method = context.request.method;
-  final userId = context.read<String>();
-  final pool = context.read<Pool<dynamic>>();
 
   if (method == HttpMethod.get) {
+    final userId = context.read<String>();
+    final pool = context.read<Pool<dynamic>>();
     try {
       final result = await pool.execute(
         Sql.named('''
@@ -48,9 +49,14 @@ FutureOr<Response> onRequest(RequestContext context) async {
 
   if (method == HttpMethod.post) {
     try {
-      final body = await context.request.json();
-      if (body is! Map<String, dynamic>) {
-        return _error(HttpStatus.badRequest, 'Request body must be an object');
+      final body = decodeObject(await context.request.body());
+      final userId = context.read<String>();
+      final pool = context.read<Pool<dynamic>>();
+      if (body['name'] != null && body['name'] is! String ||
+          body['type'] != null && body['type'] is! String ||
+          body['icon'] != null && body['icon'] is! String ||
+          body['color'] != null && body['color'] is! String) {
+        throw const FormatException('Invalid category body');
       }
 
       final name = (body['name'] as String?)?.trim();
@@ -124,6 +130,8 @@ FutureOr<Response> onRequest(RequestContext context) async {
         'Failed to create category',
       );
     } on FormatException {
+      return _error(HttpStatus.badRequest, 'Invalid JSON body');
+    } on TypeError {
       return _error(HttpStatus.badRequest, 'Invalid JSON body');
     } catch (_) {
       return _error(

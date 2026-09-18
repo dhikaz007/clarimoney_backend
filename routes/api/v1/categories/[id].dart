@@ -3,23 +3,34 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:postgres/postgres.dart';
 import 'package:clarimoney_backend/src/api_response.dart';
+import 'package:clarimoney_backend/src/transaction_validation.dart';
 
 FutureOr<Response> onRequest(RequestContext context, String id) async {
   final method = context.request.method;
-  final userId = context.read<String>();
-  final pool = context.read<Pool<dynamic>>();
   if (method != HttpMethod.put && method != HttpMethod.patch) {
     return apiResponse(
       statusCode: HttpStatus.methodNotAllowed,
       message: 'Method not allowed',
     );
   }
-  final body = await context.request.json();
-  if (body is! Map<String, dynamic>)
+  late final Map<String, dynamic> body;
+  try {
+    body = decodeObject(await context.request.body());
+  } on FormatException {
     return apiResponse(
       statusCode: HttpStatus.badRequest,
-      message: 'Request body must be an object',
+      message: 'Invalid JSON body',
     );
+  }
+  final userId = context.read<String>();
+  final pool = context.read<Pool<dynamic>>();
+  if (body['name'] != null && body['name'] is! String ||
+      body['status'] != null && body['status'] is! String) {
+    return apiResponse(
+      statusCode: HttpStatus.badRequest,
+      message: 'Invalid category update',
+    );
+  }
   final action = body['status'] as String?;
   final name = (body['name'] as String?)?.trim();
   if (name != null && (name.isEmpty || name.length > 50))
@@ -68,6 +79,11 @@ FutureOr<Response> onRequest(RequestContext context, String id) async {
     return apiResponse(
       statusCode: HttpStatus.badRequest,
       message: 'Invalid category update',
+    );
+  } catch (_) {
+    return apiResponse(
+      statusCode: HttpStatus.internalServerError,
+      message: 'Failed to update category',
     );
   }
 }

@@ -4,13 +4,14 @@ import 'package:dart_frog/dart_frog.dart';
 import 'package:postgres/postgres.dart';
 import 'package:uuid/uuid.dart';
 import 'package:clarimoney_backend/src/api_response.dart';
+import 'package:clarimoney_backend/src/transaction_validation.dart';
 
 FutureOr<Response> onRequest(RequestContext context) async {
   final method = context.request.method;
-  final userId = context.read<String>();
-  final pool = context.read<Pool<dynamic>>();
 
   if (method == HttpMethod.get) {
+    final userId = context.read<String>();
+    final pool = context.read<Pool<dynamic>>();
     try {
       final query = context.request.uri.queryParameters;
       final page = int.tryParse(query['page'] ?? '') ?? 1;
@@ -62,7 +63,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
         conditions.add(
           '(lower(t.note) LIKE lower(@search) OR lower(c.name) LIKE lower(@search))',
         );
-        parameters['search'] = '%$search%';
+        parameters['search'] = '%${escapeLike(search)}%';
       }
       if (period != null) {
         final now = DateTime.now().toUtc();
@@ -133,9 +134,15 @@ FutureOr<Response> onRequest(RequestContext context) async {
 
   if (method == HttpMethod.post) {
     try {
-      final body = await context.request.json() as Map<String, dynamic>;
+      final body = decodeObject(await context.request.body());
+      final userId = context.read<String>();
+      final pool = context.read<Pool<dynamic>>();
       final categoryId = body['category_id'] as String?;
-      final type = (body['type'] as String?) ?? 'expense';
+      final rawType = body['type'];
+      if (rawType != null && rawType is! String) {
+        throw const FormatException('Invalid type');
+      }
+      final type = (rawType as String?) ?? 'expense';
       final amount = body['amount'] as num?;
       final dateRaw = body['date'] as String?;
 
@@ -149,7 +156,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
         );
       }
 
-      final date = _parseIso(dateRaw);
+      final date = fullIsoDate(dateRaw);
       if (date == null) {
         return apiResponse(
           statusCode: HttpStatus.badRequest,
@@ -209,6 +216,11 @@ FutureOr<Response> onRequest(RequestContext context) async {
         statusCode: HttpStatus.internalServerError,
         message: 'Failed to create transaction',
       );
+    } on TypeError {
+      return apiResponse(
+        statusCode: HttpStatus.badRequest,
+        message: 'Invalid request body',
+      );
     } catch (e) {
       return apiResponse(
         statusCode: HttpStatus.internalServerError,
@@ -223,13 +235,7 @@ FutureOr<Response> onRequest(RequestContext context) async {
   );
 }
 
-String? _note(Object? value) {
-  if (value == null) return null;
-  if (value is! String || value.trim().length > 500) {
-    throw const FormatException('Invalid note');
-  }
-  return value.trim();
-}
+String? _note(Object? value) => trimmedNote(value);
 
 bool _validAmount(num? value) =>
     value != null &&
@@ -239,8 +245,3 @@ bool _validAmount(num? value) =>
     (value.toString().split('.').elementAtOrNull(1)?.length ?? 0) <= 2;
 String? _iso(Object? value) =>
     value is DateTime ? value.toUtc().toIso8601String() : null;
-DateTime? _parseIso(String value) {
-  if (!RegExp(r'^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$').hasMatch(value))
-    return null;
-  return DateTime.tryParse(value)?.toUtc();
-}

@@ -97,8 +97,9 @@ then ID descending.
 - `PATCH /api/v1/categories/:id` with `status: "archived"` or `"active"`
 
 Only categories owned by authenticated user can be changed. System categories
-remain read-only. Archived categories retain historical transactions but cannot
-receive new assignments.
+remain read-only. Category listing includes archived categories with
+`status: "archived"`; archived categories retain historical transactions but
+cannot receive new assignments.
 
 ## Health check
 

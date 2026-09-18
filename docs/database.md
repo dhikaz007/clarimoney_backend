@@ -63,7 +63,7 @@ Menyimpan income atau expense user.
 |---|---|---:|---|---|
 | `id` | `UUID` | No | - | Primary key transaction |
 | `user_id` | `UUID` | No | - | Pemilik transaction |
-| `category_id` | `UUID` | Yes | - | Category expense |
+| `category_id` | `UUID` | No | - | Required income/expense category |
 | `type` | `VARCHAR(20)` | No | `expense` | Transaction type |
 | `amount` | `NUMERIC(15,2)` | No | - | Nominal expense |
 | `date` | `TIMESTAMPTZ` | No | - | Tanggal expense; legacy wall-clock values normalized as UTC |
@@ -77,6 +77,7 @@ Constraints:
 - Foreign key: `category_id` → `categories.id`, delete set null.
 - Check: `amount > 0`.
 - Check: category type matches transaction type; archived categories cannot receive new assignments.
+- `category_id` is required for every transaction after migration 010.
 
 ## Indexes
 
