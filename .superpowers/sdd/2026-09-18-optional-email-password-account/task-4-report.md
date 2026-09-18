@@ -19,7 +19,9 @@ Status: implemented.
 ## Verification
 
 - Explicit `.env` account test command passed: 3/3 Neon-backed tests.
-- Full explicit `.env` Neon test command passed: 54 passed, 17 skipped.
+- Full Neon suite passed: 77 passed, 0 skipped, using `DATABASE_URL` and
+  `JWT_SECRET` loaded from repository `.env` via:
+  `python3 -c 'import os, subprocess; env=os.environ.copy(); env.update(dict(line.rstrip().split("=",1) for line in open(".env") if line.strip() and not line.startswith("#"))); raise SystemExit(subprocess.run(["dart","test"], env=env).returncode)'`.
 - `dart analyze`: passed with existing informational lints only.
 - `dart_frog build`: passed.
 - Review follow-up: account success documentation now omits `data`, matching
