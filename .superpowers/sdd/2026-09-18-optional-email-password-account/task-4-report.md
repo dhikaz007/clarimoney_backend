@@ -14,6 +14,7 @@ Status: implemented.
 - Added Neon-backed tests for valid deletion, wrong password, missing password,
   and cascade cleanup.
 - Documented irreversible behavior in `docs/api.md`.
+- Added deletion assertion for `refresh_token_history` cascade cleanup.
 
 ## Verification
 
@@ -23,6 +24,8 @@ Status: implemented.
   non-DB tests; Neon-backed tests skipped because `DATABASE_URL` was unset.
 - `dart analyze`: passed with existing informational lints only.
 - `dart_frog build`: passed.
+- Review follow-up: account success documentation now omits `data`, matching
+  `apiResponse` null-data behavior.
 
 ## Concern
 
@@ -31,3 +34,12 @@ when sibling middleware directory exists, reporting a rogue route. Framework-
 valid route is `routes/api/v1/auth/account/index.dart`, preserving endpoint URL.
 
 Unrelated working-tree edits were not staged. No secrets added.
+
+## Review follow-up
+
+- Aligned account deletion success example with `apiResponse`: null `data` is
+  omitted from JSON.
+- Added Neon assertion covering `refresh_token_history` cascade cleanup.
+- Ran account tests with repository `.env`: 3/3 passed.
+- Ran `dart analyze`: completed with existing informational lints only.
+- Ran `dart_frog build`: passed.

@@ -242,8 +242,7 @@ Success `200` is returned only after deletion commits:
 ```json
 {
   "status_code": 200,
-  "message": "Account deleted successfully",
-  "data": null
+  "message": "Account deleted successfully"
 }
 ```
 

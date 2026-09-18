@@ -29,6 +29,7 @@ void main() {
       expect(await _count(pool, 'transactions', userId), 0);
       expect(await _count(pool, 'user_sessions', userId), 0);
       expect(await _count(pool, 'auth_tokens', userId), 0);
+      expect(await _countHistory(pool, userId), 0);
     } finally {
       await _deleteUser(pool, userId);
       await pool.close();
@@ -93,6 +94,7 @@ Future<Response> _deletePayload(
     parameters: {'id': sessionId, 'user_id': userId, 'device_id': sessionId},
   );
   request.provide<Pool<dynamic>>(pool);
+  request.provide<AuthSession>(AuthSession(userId, sessionId));
   return account.onRequest(request.context);
 }
 
@@ -164,11 +166,32 @@ Future<void> _insertRelatedData(Pool<dynamic> pool, String userId) async {
       'hash': AuthTokenUtils.hash(AuthTokenUtils.generate()),
     },
   );
+  await pool.execute(
+    Sql.named('''INSERT INTO refresh_token_history
+      (token_hash, session_id, expires_at)
+      VALUES (@hash, @session_id, CURRENT_TIMESTAMP + INTERVAL '1 day')'''),
+    parameters: {
+      'hash': AuthTokenUtils.hash(AuthTokenUtils.generate()),
+      'session_id': sessionId,
+    },
+  );
 }
 
 Future<int> _count(Pool<dynamic> pool, String table, String userId) async {
   final rows = await pool.execute(
-    Sql.named('SELECT COUNT(*) FROM $table WHERE user_id = @id'),
+    Sql.named(
+      'SELECT COUNT(*) FROM $table WHERE ${table == 'users' ? 'id' : 'user_id'} = @id',
+    ),
+    parameters: {'id': userId},
+  );
+  return rows.single[0] as int;
+}
+
+Future<int> _countHistory(Pool<dynamic> pool, String userId) async {
+  final rows = await pool.execute(
+    Sql.named('''SELECT COUNT(*) FROM refresh_token_history h
+      JOIN user_sessions s ON s.id = h.session_id
+      WHERE s.user_id = @id'''),
     parameters: {'id': userId},
   );
   return rows.single[0] as int;

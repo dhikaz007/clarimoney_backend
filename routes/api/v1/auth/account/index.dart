@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 
 import 'package:clarimoney_backend/src/api_response.dart';
@@ -7,10 +6,7 @@ import 'package:clarimoney_backend/src/utils/password_utils.dart';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:postgres/postgres.dart';
 
-FutureOr<Response> onRequest(RequestContext context) =>
-    authMiddleware(_handle)(context);
-
-Future<Response> _handle(RequestContext context) async {
+Future<Response> onRequest(RequestContext context) async {
   if (context.request.method != HttpMethod.delete) {
     return apiResponse(
       statusCode: HttpStatus.methodNotAllowed,
