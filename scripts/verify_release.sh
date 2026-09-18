@@ -6,7 +6,7 @@ log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 dart test >"$log" 2>&1 || { cat "$log"; exit 1; }
 cat "$log"
-if grep -Eq '~[1-9][0-9]*([[:space:]]|$)' "$log"; then
+if grep -Eq '~[[:space:]]*[1-9][0-9]*([:]|[[:space:]]|$)' "$log"; then
   printf '%s\n' 'Release verification failed: tests skipped.' >&2
   exit 1
 fi
