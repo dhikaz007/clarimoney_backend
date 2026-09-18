@@ -172,6 +172,13 @@ Stable comparison value schema:
 }
 ```
 
+Comparison monetary fields preserve exact PostgreSQL numeric values. Safe values
+are JSON numbers; values outside safe JSON-number precision are exact decimal
+strings. Clients must accept both forms for `current`, `previous`, `value`,
+`absolute_change`, `percentage_change`, and driver fields. Missing values remain
+`null`. Comparison `net_cash_flow` is unavailable (`available: false`, all value
+and change fields `null`) when either compared period has no income.
+
 Overview `data` keys are `period`, `periods`, `income`, `expense`,
 `net_cash_flow`, `categories`, and `drivers`. Category-list `data` keys are
 `period`, `periods`, `categories` (array), and `drivers`. Category-detail `data`

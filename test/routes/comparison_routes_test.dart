@@ -70,6 +70,19 @@ void main() {
           'previous': {'start': _iso(previousStart), 'end': _iso(monthStart)},
         });
         expect(data['expense']['absolute_change'], 6);
+        for (final key in ['income', 'expense', 'net_cash_flow']) {
+          final metric = data[key] as Map<String, dynamic>;
+          expect(
+            metric.keys,
+            containsAll([
+              'current',
+              'previous',
+              'value',
+              'absolute_change',
+              'percentage_change',
+            ]),
+          );
+        }
         expect(data['drivers'], isA<List<dynamic>>());
 
         final categories = await fixture.call(categories_route.onRequest);
@@ -83,6 +96,19 @@ void main() {
             ),
           ),
         );
+        final categoryData = categories['data'] as Map<String, dynamic>;
+        expect(categoryData['drivers'], isA<List<dynamic>>());
+        for (final item in categoryData['categories'] as List<dynamic>) {
+          expect(
+            (item as Map<String, dynamic>).keys,
+            containsAll([
+              'current',
+              'previous',
+              'absolute_change',
+              'percentage_change',
+            ]),
+          );
+        }
 
         final detail = await fixture.call(
           (request) => category_route.onRequest(request, fixture.categoryId),
@@ -91,6 +117,15 @@ void main() {
         expect(
           (detail['data'] as Map<String, dynamic>)['category_id'],
           fixture.categoryId,
+        );
+        expect(
+          (detail['data'] as Map<String, dynamic>).keys,
+          containsAll([
+            'current',
+            'previous',
+            'absolute_change',
+            'percentage_change',
+          ]),
         );
       } finally {
         await fixture.close();

@@ -27,18 +27,16 @@ start remains previous-period data.
 - `./scripts/phase2_migration_test.sh` — passed.
 - `./scripts/verify_release_test.sh` — passed; skip parser rejects compact and
   spaced skip markers.
-- Safe `.env` release run — migrations 009/010 applied; verifier passed; tests
-  ran with zero skips. Focused comparison, summary, and auth tests passed.
-- Focused Neon summary test — 4 passed.
-- Focused Neon comparison, summary, auth tests — 35 passed.
-- Full `./scripts/verify_release.sh` — 127 passed, zero skipped; migration
-  verifier passed.
+- Historical safe `.env` release run passed before final review fixes. It is not
+  final release evidence.
+- Final disposable release gate was not rerun; no disposable URL is claimed.
 - `dart analyze` — passed; info-level style diagnostics remain.
 - `dart_frog build` — passed; category route moved to
   `routes/api/v1/categories/[id]/index.dart`; no known rogue-route warning.
 - Bruno YAML parse — passed; 38 files parsed.
 - `git diff --check` — passed.
-- `./scripts/verify_migrations.sh` — passed against Neon.
+- `./scripts/verify_migrations.sh` — historical Neon result only; rerun against
+  disposable release DB before deploy.
 
 ## Rogue route
 
@@ -48,7 +46,7 @@ warning.
 
 ## Release gate
 
-Run with production credentials before deploy. Script does not print credentials:
+Run with disposable release credentials before deploy. No disposable Neon gate is claimed without `RELEASE_VERIFY_DATABASE_URL`. Script does not print credentials:
 
 ```bash
 ./scripts/verify_release.sh

@@ -1,22 +1,15 @@
 import 'package:test/test.dart';
 
 import 'package:clarimoney_backend/src/comparison_calculation.dart';
-import 'package:clarimoney_backend/src/comparison_route.dart';
 import 'package:clarimoney_backend/src/transaction_validation.dart';
 
 void main() {
-  test('parses PostgreSQL numeric aggregates safely', () {
-    expect(parseComparisonNumeric('12.50'), 12.50);
-    expect(parseComparisonNumeric(null), isNull);
-    expect(() => parseComparisonNumeric('NaN'), throwsFormatException);
-  });
-
   test('preserves PostgreSQL decimal strings and safe integer JSON values', () {
     expect(
       comparisonJsonNumeric('12345678901234567890.01'),
       '12345678901234567890.01',
     );
-    expect(comparisonJsonNumeric('12.50'), '12.50');
+    expect(comparisonJsonNumeric('12.50'), 12.5);
     expect(comparisonJsonNumeric('12'), 12);
   });
   test('preserves large comparison decimal output', () {
@@ -155,6 +148,107 @@ void main() {
       'value': null,
       'absolute_change': null,
       'percentage_change': null,
+    });
+  });
+
+  test(
+    'net cash flow stays unavailable for empty and expense-only periods',
+    () {
+      for (final totals in [
+        (aggregatePeriod([]), aggregatePeriod([])),
+        (
+          aggregatePeriod([
+            const ComparisonTransaction(
+              categoryId: 'e',
+              categoryName: 'E',
+              type: 'expense',
+              amount: 10,
+            ),
+          ]),
+          aggregatePeriod([]),
+        ),
+      ]) {
+        expect(
+          buildComparison(current: totals.$1, previous: totals.$2).netCashFlow,
+          {
+            'available': false,
+            'value': null,
+            'absolute_change': null,
+            'percentage_change': null,
+          },
+        );
+      }
+    },
+  );
+
+  test('net cash flow is available for income-only and full periods', () {
+    final incomeOnly = buildComparison(
+      current: aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'i',
+          categoryName: 'I',
+          type: 'income',
+          amount: 10,
+        ),
+      ]),
+      previous: aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'i',
+          categoryName: 'I',
+          type: 'income',
+          amount: 5,
+        ),
+      ]),
+    );
+    expect(incomeOnly.netCashFlow['available'], isTrue);
+    expect(incomeOnly.netCashFlow['value'], 10);
+    expect(incomeOnly.netCashFlow['absolute_change'], 5);
+
+    final full = buildComparison(
+      current: aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'i',
+          categoryName: 'I',
+          type: 'income',
+          amount: 20,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'e',
+          categoryName: 'E',
+          type: 'expense',
+          amount: 8,
+        ),
+      ]),
+      previous: aggregatePeriod([
+        const ComparisonTransaction(
+          categoryId: 'i',
+          categoryName: 'I',
+          type: 'income',
+          amount: 10,
+        ),
+        const ComparisonTransaction(
+          categoryId: 'e',
+          categoryName: 'E',
+          type: 'expense',
+          amount: 9,
+        ),
+      ]),
+    );
+    expect(full.netCashFlow['available'], isTrue);
+    expect(full.netCashFlow['value'], 12);
+    expect(full.netCashFlow['absolute_change'], 11);
+  });
+
+  test('net cash flow preserves sign transition', () {
+    final result = buildComparison(
+      current: PeriodTotals(income: 1, expense: 5, categories: const {}),
+      previous: PeriodTotals(income: 5, expense: 1, categories: const {}),
+    );
+    expect(result.netCashFlow, {
+      'available': true,
+      'value': -4,
+      'absolute_change': -8,
+      'percentage_change': -200,
     });
   });
 

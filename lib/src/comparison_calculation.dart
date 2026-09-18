@@ -230,22 +230,34 @@ ComparisonResult buildComparison({
     driver.remove('_magnitude');
   }
 
-  final netCurrent = _safeDifference(current.income, current.expense);
-  final netPrevious = _safeDifference(previous.income, previous.expense);
+  final netCurrent = current.income == null
+      ? null
+      : _safeDifference(current.income, current.expense);
+  final netPrevious = previous.income == null
+      ? null
+      : _safeDifference(previous.income, previous.expense);
+  final netCashFlow = netCurrent == null || netPrevious == null
+      ? <String, dynamic>{
+          'available': false,
+          'value': null,
+          'absolute_change': null,
+          'percentage_change': null,
+        }
+      : <String, dynamic>{
+          'available': true,
+          ...compareValue(current: netCurrent, previous: netPrevious),
+        };
   return ComparisonResult(
     income: compareValue(current: current.income, previous: previous.income),
     expense: compareValue(current: current.expense, previous: previous.expense),
-    netCashFlow: {
-      'available': netCurrent != null && netPrevious != null,
-      ...compareValue(current: netCurrent, previous: netPrevious),
-    },
+    netCashFlow: netCashFlow,
     categories: categories,
     drivers: drivers.take(3).toList(),
   );
 }
 
 num? _safeDifference(num? left, num? right) {
-  if (left == null || right == null) return null;
-  final result = left - right;
+  if (left == null) return null;
+  final result = left - (right ?? 0);
   return result.isFinite ? result : null;
 }

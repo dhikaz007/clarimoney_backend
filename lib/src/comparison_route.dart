@@ -73,10 +73,12 @@ Future<Map<String, dynamic>> fetchComparison({
         SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd),
         SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd),
         SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd),
-        COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd), 0)
-          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd), 0),
-        COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
-          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0),
+        CASE WHEN SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd) IS NULL THEN NULL
+          ELSE SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd)
+            - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd), 0) END,
+        CASE WHEN SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd) IS NULL THEN NULL
+          ELSE SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd)
+            - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0) END,
         SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd)
           - SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd),
         SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd)
@@ -90,17 +92,21 @@ Future<Map<String, dynamic>> fetchComparison({
             - SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd))
             / SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd) * 100 END
         ,
-        (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd), 0)
-          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd), 0))
-        - (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
-          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)),
-        CASE WHEN (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
-          - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)) = 0 THEN NULL
-          ELSE (((COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd), 0)
+        CASE WHEN SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd) IS NULL
+          OR SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd) IS NULL THEN NULL
+          ELSE (SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd)
             - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd), 0))
-            - (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
+            - (SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd)
+            - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)) END,
+        CASE WHEN SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd) IS NULL
+          OR SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd) IS NULL
+          OR (SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd)
+            - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)) = 0 THEN NULL
+          ELSE (((SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @currentStart AND t.date < @currentEnd)
+            - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @currentStart AND t.date < @currentEnd), 0))
+            - (SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd)
             - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)))
-            / (COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd), 0)
+            / (SUM(t.amount) FILTER (WHERE t.type = 'income' AND t.date >= @previousStart AND t.date < @previousEnd)
             - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense' AND t.date >= @previousStart AND t.date < @previousEnd), 0)) * 100 END
       FROM transactions t
       WHERE t.user_id = @userId
@@ -123,8 +129,9 @@ Future<Map<String, dynamic>> fetchComparison({
              - COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd), 0))
              / COALESCE(SUM(t.amount) FILTER (WHERE t.date >= @previousStart AND t.date < @previousEnd), 0) * 100 END
       FROM categories c
-      LEFT JOIN transactions t ON t.category_id = c.id
-        AND t.user_id = @userId
+       LEFT JOIN transactions t ON t.category_id = c.id
+         AND t.user_id = @userId
+         AND t.type = c.type
         AND ((t.date >= @currentStart AND t.date < @currentEnd)
           OR (t.date >= @previousStart AND t.date < @previousEnd))
       WHERE (c.user_id = @userId OR c.user_id IS NULL)
@@ -166,6 +173,7 @@ Future<Map<String, dynamic>> fetchComparison({
     ..['absolute_change'] = comparisonJsonNumeric(total[7])
     ..['percentage_change'] = comparisonJsonNumeric(total[9]);
   result.netCashFlow
+    ..['available'] = total[4] != null && total[5] != null
     ..['value'] = comparisonJsonNumeric(total[4])
     ..['absolute_change'] = comparisonJsonNumeric(total[10])
     ..['percentage_change'] = comparisonJsonNumeric(total[11]);

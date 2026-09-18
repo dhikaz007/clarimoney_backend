@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'exact_decimal.dart';
+
 Map<String, dynamic> decodeObject(Object? body) {
   if (body is! String)
     throw const FormatException('Request body must be an object');
@@ -45,14 +47,5 @@ bool hasScientificAmountLiteral(String body) => RegExp(
 ).hasMatch(body);
 
 Object? comparisonJsonNumeric(Object? value) {
-  if (value == null) return null;
-  final text = value.toString().trim();
-  final normalized = text.replaceFirst(RegExp(r'^(-?)0+(?=\d)'), r'$1');
-  final integer = BigInt.tryParse(normalized);
-  if (integer != null &&
-      integer >= BigInt.from(-9007199254740991) &&
-      integer <= BigInt.from(9007199254740991)) {
-    return integer.toInt();
-  }
-  return normalized;
+  return exactJsonDecimal(value);
 }

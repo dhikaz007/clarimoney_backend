@@ -51,10 +51,16 @@ log="$(mktemp)"
 trap 'rm -f "$log"' EXIT
 psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f migrations/009_phase2_unified_transactions.sql
 psql "$DATABASE_URL" -X -v ON_ERROR_STOP=1 -f migrations/010_phase2_unified_transactions_review_fixes.sql
+./scripts/verify_migrations.sh
 dart test >"$log" 2>&1 || { cat "$log"; exit 1; }
 cat "$log"
 if grep -Eq '~[[:space:]]*[1-9][0-9]*([:]|[[:space:]]|$)' "$log"; then
   printf '%s\n' 'Release verification failed: tests skipped.' >&2
   exit 1
 fi
-./scripts/verify_migrations.sh
+dart analyze
+dart_frog build
+if ! ruby -e "require 'yaml'; Dir['bruno/**/*.yml'].each { |f| YAML.load_file(f) }; puts 'Bruno YAML validation passed.'"; then
+  printf '%s\n' 'Release verification failed: Bruno YAML validation failed.' >&2
+  exit 1
+fi
