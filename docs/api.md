@@ -98,6 +98,42 @@ unavailable for empty or expense-only periods. `summary` and
 `largest_category` contain expense categories only; income-only responses use
 an empty breakdown and `largest_category: null`.
 
+Summary response shape:
+
+```json
+{
+  "status_code": 200,
+  "message": "Summary fetched successfully",
+  "data": {
+    "total_income": 100.10,
+    "total_expense": 25.05,
+    "net_cash_flow_available": true,
+    "net_cash_flow": 75.05,
+    "period": "this_month",
+    "summary": [],
+    "largest_category": null
+  }
+}
+```
+
+State examples:
+
+- Empty: `total_income: 0`, `total_expense: 0`,
+  `net_cash_flow_available: false`, `net_cash_flow: null`, empty `summary`,
+  `largest_category: null`.
+- Expense-only: income `0`, expense total present,
+  `net_cash_flow_available: false`, `net_cash_flow: null`, expense breakdown
+  present.
+- Income-only: income total present, expense `0`,
+  `net_cash_flow_available: true`, net equals income, empty breakdown,
+  `largest_category: null`.
+- Full: both totals present, `net_cash_flow_available: true`, net equals
+  income minus expense, expense breakdown present.
+
+Money totals use PostgreSQL `numeric` aggregation. API emits JSON numbers;
+clients should parse them as decimal money values, not binary floating-point
+values. This endpoint does not claim fixed trailing-zero formatting.
+
 ## Category lifecycle
 
 - `GET /api/v1/categories`

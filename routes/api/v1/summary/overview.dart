@@ -63,7 +63,9 @@ FutureOr<Response> onRequest(RequestContext context) async {
         SELECT
           SUM(t.amount) FILTER (WHERE t.type = 'income'),
           SUM(t.amount) FILTER (WHERE t.type = 'expense'),
-          COUNT(*) FILTER (WHERE t.type = 'income')
+          COUNT(*) FILTER (WHERE t.type = 'income'),
+          COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'income'), 0)
+            - COALESCE(SUM(t.amount) FILTER (WHERE t.type = 'expense'), 0)
         FROM transactions t
         WHERE t.user_id = @userId AND t.date >= @start AND t.date < @end
       '''),
@@ -75,16 +77,13 @@ FutureOr<Response> onRequest(RequestContext context) async {
       expense: totalRow[1] as num?,
       incomeCount: (totalRow[2] as int?) ?? 0,
       items: items,
+      netCashFlow: totalRow[3] as num?,
     );
 
     return apiResponse(
       statusCode: HttpStatus.ok,
       message: 'Summary fetched successfully',
-      data: {
-        ...summaryData,
-        'period': period,
-        'summary': items,
-      },
+      data: {...summaryData, 'period': period, 'summary': items},
     );
   } catch (e) {
     return apiResponse(

@@ -25,3 +25,24 @@ Implemented.
 
 - Full test run needs valid `JWT_SECRET` (minimum 32 characters) and expected database test configuration.
 - Existing unrelated edits remain untouched: `bruno/ClariMoney_API/environments/local.yml`, phase plan/spec files.
+
+## Review follow-up
+
+- Added Neon-backed route tests covering UTC boundaries, timezone-offset inputs,
+  previous-month rollover, all four summary states, response fields, and
+  omitted transaction `type` compatibility.
+- Net cash flow arithmetic now runs in PostgreSQL `numeric`; Dart maps returned
+  numeric values without accumulating category totals. Docs state JSON numeric
+  output and avoid fixed-format precision claims.
+- Follow-up tests are skipped unless `DATABASE_URL` exists and `JWT_SECRET`
+  has at least 32 characters.
+
+## Review verification
+
+- Valid-JWT full suite: passed, 54 passed, 48 skipped.
+- Route-level summary suite: added; skipped in this environment because
+  `DATABASE_URL` is unset.
+- Neon-backed execution: not run; no `DATABASE_URL` available.
+- Analyzer: passed with existing info-level findings.
+- Production build: passed.
+- Diff check: passed.

@@ -3,6 +3,7 @@ Map<String, dynamic> buildSummaryData({
   required num? expense,
   required int incomeCount,
   required List<Map<String, dynamic>> items,
+  num? netCashFlow,
 }) {
   final totalIncome = income ?? 0;
   final totalExpense = expense ?? 0;
@@ -15,7 +16,9 @@ Map<String, dynamic> buildSummaryData({
     'total_income': totalIncome,
     'total_expense': totalExpense,
     'net_cash_flow_available': available,
-    'net_cash_flow': available ? totalIncome - totalExpense : null,
+    'net_cash_flow': available
+        ? (netCashFlow ?? totalIncome - totalExpense)
+        : null,
     'largest_category': items.isEmpty ? null : items.first,
   };
 }
