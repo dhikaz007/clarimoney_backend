@@ -25,13 +25,26 @@ FutureOr<Response> onRequest(RequestContext context) async {
       userId: context.read<String>(),
       period: period,
     );
+    final categories = (data['categories'] as Map<String, dynamic>).values
+        .map((value) => value as Map<String, dynamic>)
+        .map(
+          (value) => {
+            'category_id': value['category_id'],
+            'name': value['name'],
+            'current': value['current'],
+            'previous': value['previous'],
+            'absolute_change': value['absolute_change'],
+            'percentage_change': value['percentage_change'],
+          },
+        )
+        .toList();
     return apiResponse(
       statusCode: HttpStatus.ok,
       message: 'Category comparison fetched successfully',
       data: {
         'period': data['period'],
         'periods': data['periods'],
-        'categories': data['categories'],
+        'categories': categories,
         'drivers': data['drivers'],
       },
     );

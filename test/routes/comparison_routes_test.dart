@@ -13,6 +13,15 @@ import '../../routes/api/v1/summary/comparison/categories.dart'
     as categories_route;
 
 void main() {
+  test('comparison rejects invalid period before database access', () async {
+    final request = TestRequestContext(
+      path: '/api/v1/summary/comparison?period=bad',
+      method: HttpMethod.get,
+    );
+    final response = await overview_route.onRequest(request.context);
+    expect(response.statusCode, HttpStatus.badRequest);
+  });
+
   test(
     'comparison routes return full ranges and persistent category identity',
     () async {

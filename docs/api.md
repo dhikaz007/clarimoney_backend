@@ -160,6 +160,25 @@ persistent ID, retain current name, and drivers return at most three entries,
 sorted by absolute change magnitude then category ID. Foreign category IDs
 return `404`.
 
+Stable comparison value schema:
+
+```json
+{
+  "current": 125,
+  "previous": 100,
+  "value": 125,
+  "absolute_change": 25,
+  "percentage_change": 25
+}
+```
+
+Overview `data` keys are `period`, `periods`, `income`, `expense`,
+`net_cash_flow`, `categories`, and `drivers`. Category-list `data` keys are
+`period`, `periods`, `categories` (array), and `drivers`. Category-detail `data`
+keys are `period`, `periods`, `category_id`, `name`, `current`, `previous`,
+`absolute_change`, and `percentage_change`. Missing values remain `null`;
+numeric zero remains `0`.
+
 ## Health check
 
 ### `GET /`

@@ -73,6 +73,9 @@ Register and login are public. Categories, transactions, and summary require `Au
 | PUT | `/api/v1/transactions/:id` | Yes | Update owned transaction |
 | DELETE | `/api/v1/transactions/:id` | Yes | Delete owned transaction |
 | GET | `/api/v1/summary/overview?period=this_month` | Yes | Spending summary |
+| GET | `/api/v1/summary/comparison?period=this_month` | Yes | Income, expense, and cash-flow comparison |
+| GET | `/api/v1/summary/comparison/categories?period=this_month` | Yes | Category comparison list |
+| GET | `/api/v1/categories/:id/comparison?period=this_month` | Yes | Single-category comparison |
 
 ## Validation
 

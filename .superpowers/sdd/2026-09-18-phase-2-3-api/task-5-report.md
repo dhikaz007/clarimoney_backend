@@ -2,7 +2,7 @@
 
 ## Status
 
-Complete. Added authenticated comparison overview, category, and category-detail endpoints.
+Complete. Review findings fixed across authenticated comparison overview, category, and category-detail endpoints.
 
 ## Changes
 
@@ -10,6 +10,9 @@ Complete. Added authenticated comparison overview, category, and category-detail
 - Added UTC period derivation with full millisecond ISO ranges.
 - Added deterministic category aggregation and maximum-three drivers.
 - Enforced category ownership for detail comparison; foreign IDs return `404`.
+- Allowed system categories while denying foreign user categories.
+- Moved period/category aggregation into PostgreSQL grouped `numeric` queries.
+- Added explicit stable response schemas with `current` and `previous` values.
 - Added route tests, API docs, and Bruno requests.
 
 ## Verification
@@ -17,6 +20,7 @@ Complete. Added authenticated comparison overview, category, and category-detail
 - `dart analyze`: passed with existing lint infos; no errors.
 - `dart_frog build`: passed. Existing rogue-route warning remains for pre-existing `routes/api/v1/categories/[id].dart`.
 - Focused tests: `dart test test/src/comparison_calculation_test.dart test/routes/comparison_routes_test.dart` — passed, 21 passed, 2 skipped DB integration tests.
+- Neon-backed tests: unavailable; `DATABASE_URL` and `JWT_SECRET` unset in environment.
 - Full `dart test`: pre-existing JWT tests fail when `JWT_SECRET` is absent/short; DB tests skip without configured DB/JWT environment. No task test failures.
 - No secrets added.
 
