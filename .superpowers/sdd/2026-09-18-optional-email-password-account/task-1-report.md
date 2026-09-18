@@ -20,7 +20,7 @@ Verification:
 Migration:
 - Not applied to Neon. `DATABASE_URL` was not configured in shell; local `.env` was not read to avoid exposing secrets.
 
-Commit: pending.
+Commit: `0afdcff` (`feat: add auth token and email foundation`).
 
 Concerns:
 - Full test run without `JWT_SECRET` fails two pre-existing JWT tests by design. Secret-injected run passes.
